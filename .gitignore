@@ -1,2 +1,6 @@
-dhmp/build
-bin
+build/*
+/dhmp/bin/*
+.vscode/*
+/dhmp/build/*
+/dhmp/lib/*
+
