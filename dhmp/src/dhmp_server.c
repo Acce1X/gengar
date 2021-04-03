@@ -131,6 +131,7 @@ struct dhmp_area *dhmp_area_create(bool has_buddy_sys,size_t length)
 	{
 		ERROR_LOG("allocate nvm memory error.");
 		return NULL;
+	
 	}
 
 	dev=dhmp_get_dev_from_server();
@@ -194,7 +195,7 @@ void dhmp_server_init()
 	dhmp_config_init(&server->config, false);
 	dhmp_context_init(&server->ctx);
 
-	server->watcher_trans=NULL；
+	server->watcher_trans=NULL;
 	/*init client transport list*/
 	server->cur_connections=0;
 	pthread_mutex_init(&server->mutex_client_list, NULL);

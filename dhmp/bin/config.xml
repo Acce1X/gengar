@@ -11,25 +11,7 @@
 
 	<server id="1">
         		<nic_name>ib0</nic_name>
-                <addr>10.10.0.149</addr>
-                <port>39300</port>
-                <rdelay>200</rdelay>
-                <wdelay>800</wdelay>
-                <knum>1</knum>
-	</server>
-
-	<server id="2">
-        		<nic_name>ib0</nic_name>
-                <addr>10.10.0.150</addr>
-                <port>39300</port>
-                <rdelay>200</rdelay>
-                <wdelay>800</wdelay>
-                <knum>1</knum>
-	</server>
-	
-	<server id="3">
-        		<nic_name>ib0</nic_name>
-                <addr>10.10.0.153</addr>
+                <addr>10.10.10.1</addr>
                 <port>39300</port>
                 <rdelay>200</rdelay>
                 <wdelay>800</wdelay>
