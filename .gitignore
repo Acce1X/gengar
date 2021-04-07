@@ -3,4 +3,4 @@ build/*
 .vscode/*
 /dhmp/build/*
 /dhmp/lib/*
-
+.clang-format

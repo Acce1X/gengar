@@ -49,65 +49,65 @@
 #endif
 
 enum dhmp_msg_type {
-  DHMP_MSG_MALLOC_REQUEST,
-  DHMP_MSG_MALLOC_RESPONSE,
-  DHMP_MSG_MALLOC_ERROR,
-  DHMP_MSG_FREE_REQUEST,
-  DHMP_MSG_FREE_RESPONSE,
-  DHMP_MSG_APPLY_DRAM_REQUEST,
-  DHMP_MSG_APPLY_DRAM_RESPONSE,
-  DHMP_MSG_CLEAR_DRAM_REQUEST,
-  DHMP_MSG_CLEAR_DRAM_RESPONSE,
-  DHMP_MSG_MEM_CHANGE,
-  DHMP_MSG_SERVER_INFO_REQUEST,
-  DHMP_MSG_SERVER_INFO_RESPONSE,
-  DHMP_MSG_CLOSE_CONNECTION
+    DHMP_MSG_MALLOC_REQUEST,
+    DHMP_MSG_MALLOC_RESPONSE,
+    DHMP_MSG_MALLOC_ERROR,
+    DHMP_MSG_FREE_REQUEST,
+    DHMP_MSG_FREE_RESPONSE,
+    DHMP_MSG_APPLY_DRAM_REQUEST,
+    DHMP_MSG_APPLY_DRAM_RESPONSE,
+    DHMP_MSG_CLEAR_DRAM_REQUEST,
+    DHMP_MSG_CLEAR_DRAM_RESPONSE,
+    DHMP_MSG_MEM_CHANGE,
+    DHMP_MSG_SERVER_INFO_REQUEST,
+    DHMP_MSG_SERVER_INFO_RESPONSE,
+    DHMP_MSG_CLOSE_CONNECTION
 };
 
 /*struct dhmp_msg:use for passing control message*/
 struct dhmp_msg {
-  enum dhmp_msg_type msg_type;
-  size_t data_size;
-  void *data;
+    enum dhmp_msg_type msg_type;
+    size_t data_size;
+    void *data;
 };
 
 /*struct dhmp_addr_info is the addr struct in cluster*/
 struct dhmp_addr_info {
-  int read_cnt;
-  int write_cnt;
-  int node_index;
-  bool write_flag;
-  struct ibv_mr dram_mr;
-  struct ibv_mr nvm_mr;
-  struct hlist_node addr_entry;
+    int read_cnt;
+    int write_cnt;
+    int node_index;
+    bool write_flag;
+    struct ibv_mr dram_mr;
+    struct ibv_mr nvm_mr;
+    struct hlist_node addr_entry;
 };
 
 /*dhmp malloc request msg*/
 struct dhmp_mc_request {
-  size_t req_size;
-  struct dhmp_addr_info *addr_info;
+    size_t req_size;
+    struct dhmp_addr_info *addr_info;
 };
 
 /*dhmp malloc response msg*/
 struct dhmp_mc_response {
-  struct dhmp_mc_request req_info;
-  struct ibv_mr mr;
+    struct dhmp_mc_request req_info;
+    struct ibv_mr mr;
 };
 
 /*dhmp free memory request msg*/
 struct dhmp_free_request {
-  struct dhmp_addr_info *addr_info;
-  struct ibv_mr mr;
+    struct dhmp_addr_info *addr_info;
+    struct ibv_mr mr;
 };
 
 /*dhmp free memory response msg*/
 struct dhmp_free_response {
-  struct dhmp_addr_info *addr_info;
+    struct dhmp_addr_info *addr_info;
 };
 
 struct dhmp_dram_info {
-  void *nvm_addr;
-  struct ibv_mr dram_mr;
+    void *nvm_addr;
+    struct ibv_mr dram_mr;
 };
 
 /**

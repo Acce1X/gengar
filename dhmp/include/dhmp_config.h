@@ -7,27 +7,27 @@
 #define DHMA_NIC_NAME_LEN 10
 
 struct dhmp_net_info {
-  char nic_name[DHMA_NIC_NAME_LEN];
-  char addr[DHMP_ADDR_LEN];
-  int port;
+    char nic_name[DHMA_NIC_NAME_LEN];
+    char addr[DHMP_ADDR_LEN];
+    int port;
 };
 
 /*nvm simulate infomation*/
 struct dhmp_simu_info {
-  int rdelay;
-  int wdelay;
-  int knum;
+    int rdelay;
+    int wdelay;
+    int knum;
 };
 
 struct dhmp_config {
-  struct dhmp_net_info net_infos[DHMP_SERVER_NODE_NUM];
-  struct dhmp_simu_info simu_infos[DHMP_SERVER_NODE_NUM];
-  int curnet_id; // store the net_infos index of curnet
-  int nets_cnt;  // current include total server nodes
-  char watcher_addr[DHMP_ADDR_LEN];
-  int watcher_port;
+    struct dhmp_net_info net_infos[DHMP_SERVER_NODE_NUM];
+    struct dhmp_simu_info simu_infos[DHMP_SERVER_NODE_NUM];
+    int curnet_id; // store the net_infos index of curnet
+    int nets_cnt;  // current include total server nodes
+    char watcher_addr[DHMP_ADDR_LEN];
+    int watcher_port;
 
-  // struct dhmp_net_info replica_net_infos[REPLICAS_NUM];
+    // struct dhmp_net_info replica_net_infos[REPLICAS_NUM];
 };
 
 /**

@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 2.6)
 
 # 项目信息
 project (DHMP)
-
+set(CMAKE_C_STANDARD 11)
 #vscode:clangd需要
 set(CMAKE_EXPORT_COMPILECOMMANDS ON)
 # 添加 math 子目录

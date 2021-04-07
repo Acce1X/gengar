@@ -4,11 +4,11 @@
 #include "linux/list.h"
 
 struct dhmp_device {
-  struct ibv_context *verbs;
-  struct ibv_pd *pd;
-  struct ibv_device_attr device_attr;
+    struct ibv_context *verbs;
+    struct ibv_pd *pd;
+    struct ibv_device_attr device_attr;
 
-  struct list_head dev_entry;
+    struct list_head dev_entry;
 };
 
 void dhmp_dev_list_init(struct list_head *dev_list);

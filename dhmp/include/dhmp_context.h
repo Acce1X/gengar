@@ -11,15 +11,15 @@
 typedef void (*dhmp_event_handler)(int fd, void *data_ptr);
 
 struct dhmp_event_data {
-  int fd;
-  void *data_ptr;
-  dhmp_event_handler event_handler;
+    int fd;
+    void *data_ptr;
+    dhmp_event_handler event_handler;
 };
 
 struct dhmp_context {
-  int epoll_fd;
-  bool stop;
-  pthread_t epoll_thread;
+    int epoll_fd;
+    bool stop;
+    pthread_t epoll_thread;
 };
 
 int dhmp_context_init(struct dhmp_context *ctx);
