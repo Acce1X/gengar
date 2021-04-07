@@ -1,29 +1,25 @@
-#include <stdio.h>
 #include "dhmp.h"
+#include <stdio.h>
 
-int main(int argc,char *argv[])
-{
-	void *addr;
-	int size=65536;
-	char *str;
+int main(int argc, char *argv[]) {
+    void *addr;
+    int size = 65536;
+    char *str;
 
-	str=malloc(size);
-	snprintf(str, size, "hello world");
-	
-	dhmp_client_init();
+    str = malloc(size);
+    snprintf(str, size, "hello world");
 
-	addr=dhmp_malloc(size);
-	
-	dhmp_write(addr, str, size);
+    dhmp_client_init();
 
-	dhmp_read(addr, str, size);
-	
-	dhmp_free(addr);
-	
-	dhmp_client_destroy();
+    addr = dhmp_malloc(size);
 
-	return 0;
+    dhmp_write(addr, str, size);
+
+    dhmp_read(addr, str, size);
+
+    dhmp_free(addr);
+
+    dhmp_client_destroy();
+
+    return 0;
 }
-
-
-

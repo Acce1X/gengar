@@ -289,7 +289,7 @@ GateOne.Base.update = function(self, obj/*, ... */) {
                     if (!self[k].__name__) {
                         try {
                             self[k].__name__ = k;
-                        } catch (e) {}; // Just ignore these errors
+                        } catch (e) {} // Just ignore these errors
                     }
                 }
             }
@@ -706,7 +706,7 @@ var go = GateOne.Base.update(GateOne, {
                     scale = parseFloat(fontSize.substring(0, fontSize.length-2));
                 } else {
                     // px, cm, in, etc etc aren't supported (yet)
-                    ;;
+
                 }
                 if (scale) {
                     translateY = ((100 * scale) - 100) / 2; // translateY needs to be in % (one half of scale)
@@ -772,7 +772,7 @@ var go = GateOne.Base.update(GateOne, {
                 scale = parseFloat(go.prefs.fontSize.substring(0, go.prefs.fontSize.length-2))
             } else {
                 // px, cm, in, etc etc aren't supported (yet)
-                ;;
+
             }
             if (scale) {
                 translateY = ((100 * scale) - 100) / 2; // translateY needs to be in % (one half of scale)
@@ -1676,7 +1676,7 @@ GateOne.Base.update(GateOne.Utils, {
             userPrefs = {};
         for (var pref in prefs) {
             if (pref in GateOne.noSavePrefs) {
-                ;; // Don't save it
+                 // Don't save it
             } else {
                 userPrefs[pref] = prefs[pref];
             }
@@ -4726,7 +4726,7 @@ GateOne.Base.update(GateOne.Visual, {
                         i--; // Fix the index since we just changed it
                         v.dialogs.unshift(dialogContainer); // Bring to front
                         if (options && options.noEsc) {
-                            ;;
+
                         } else {
                             // Make it so the user can press the ESC key to close the dialog
                             dialogContainer.onkeyup = function(e) {
@@ -4925,10 +4925,10 @@ GateOne.Base.update(GateOne.Visual, {
                 setTimeout(function() {
                     if (options.events['moved']) {
                         options.events['moved'](dialogContainer);
-                    };
+                    }
                     if (options.events['resized']) {
                         options.events['resized'](dialogContainer);
-                    };
+                    }
                 }, 550);
             },
             toggleMinimize = function(e) {
@@ -5386,7 +5386,7 @@ GateOne.Storage.dbObject = function(DB) {
                 result = [];
             cursorRequest.onsuccess = function(e) {
                 var cursor = e.target.result;
-                if (!cursor) { return };
+                if (!cursor) { return }
                 result.push(cursor.value);
                 cursor["continue"](); // Need this wierd syntax because Opera will die on the keyword, "continue"
             };
@@ -5563,7 +5563,7 @@ GateOne.Base.update(GateOne.Storage, {
                                         S.fileSyncAction(message);
                                         S.failedRequirementsCounter[remoteFileObj.filename] += 1;
                                     }, 100);
-                                    return;
+
                                 } else {
                                     logDebug("Dependency loaded!");
                                     // Emulate an incoming message from the server to load this JS

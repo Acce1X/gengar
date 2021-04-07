@@ -16,5 +16,10 @@
                 <rdelay>200</rdelay>
                 <wdelay>800</wdelay>
                 <knum>1</knum>
+				<replica>
+					<addr>10.10.10.2</addr>
+					<port>39300</port>
+				</replica>
 	</server>
+
 </dhmp_config>

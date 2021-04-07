@@ -4,5 +4,3 @@
 int dhmp_timerfd_create(struct itimerspec *new_value);
 
 #endif
-
-

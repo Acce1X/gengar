@@ -13,6 +13,7 @@ set (EXECUTABLE_OUTPUT_PATH ${DHMP_SOURCE_DIR}/bin)
 add_executable(client ${CLIENT_SRCS})
 add_executable(server ${SERVER_SRCS})
 add_executable(watcher ${WATCHER_SRCS})
+find_package(LibXml2 REQUIRED)
 
 # 添加链接库
 target_link_libraries(client dhmp)

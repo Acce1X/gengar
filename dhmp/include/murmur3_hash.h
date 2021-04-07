@@ -7,12 +7,12 @@
 
 //-----------------------------------------------------------------------------
 // Platform-specific functions and macros
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 //-----------------------------------------------------------------------------
 
-uint32_t MurmurHash3_x86_32 ( const void* key, size_t length );
+uint32_t MurmurHash3_x86_32(const void *key, size_t length);
 
 //-----------------------------------------------------------------------------
 
