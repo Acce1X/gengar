@@ -84,9 +84,11 @@ int dhmp_transport_listen(struct dhmp_transport *rdma_trans, int listen_port);
 void dhmp_post_send(struct dhmp_transport *rdma_trans,
                     struct dhmp_msg *msg_ptr);
 
+void dhmp_post_recv(struct dhmp_transport *rdma_trans, void *addr);
+
 int dhmp_rdma_write(struct dhmp_transport *rdma_trans,
                     struct dhmp_addr_info *addr_info, struct ibv_mr *mr,
-                    void *local_addr, int length, int dram_flag);
+                    void *local_addr, int length);
 
 int dhmp_rdma_read(struct dhmp_transport *rdma_trans, struct ibv_mr *mr,
                    void *local_addr, int length);

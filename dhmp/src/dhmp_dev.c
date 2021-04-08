@@ -1,14 +1,4 @@
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <infiniband/verbs.h>
-#include <netinet/in.h>
-#include <rdma/rdma_cma.h>
-
-#include "dhmp.h"
-#include "dhmp_config.h"
-#include "dhmp_context.h"
 #include "dhmp_dev.h"
-#include "dhmp_hash.h"
 #include "dhmp_log.h"
 
 /*
@@ -40,6 +30,8 @@ out:
     dev_ptr->verbs = NULL;
     return retval;
 }
+
+//=============================== public methods ===============================
 
 /*
  *	the function will get the rdma devices in the computer,

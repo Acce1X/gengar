@@ -1,17 +1,9 @@
 #include "dhmp_server.h"
-#include "dhmp.h"
-#include "dhmp_client.h"
-#include "dhmp_config.h"
-#include "dhmp_context.h"
 #include "dhmp_dev.h"
 #include "dhmp_hash.h"
 #include "dhmp_log.h"
-#include "dhmp_poll.h"
-#include "dhmp_task.h"
-#include "dhmp_timerfd.h"
 #include "dhmp_transport.h"
 #include "dhmp_watcher.h"
-#include "dhmp_work.h"
 
 // 4KB:4096,8192,16384,32768,65536,131072,262144
 // 8KB:8192,16384,32768,65536,131072,262144,524288
@@ -38,6 +30,8 @@ const size_t buddy_size[MAX_ORDER] = {65536, 131072, 262144, 524288, 1048576};
 
 struct dhmp_server *server = NULL;
 
+//=============================== public methods ===============================
+
 int dhmp_hash_in_server(void *nvm_addr) {
     uint32_t key;
     int index;
@@ -54,8 +48,7 @@ int dhmp_hash_in_server(void *nvm_addr) {
 struct dhmp_device *dhmp_get_dev_from_server() {
     struct dhmp_device *res_dev_ptr = NULL;
     if (!list_empty(&server->dev_list)) {
-        res_dev_ptr =
-            list_first_entry(&server->dev_list, struct dhmp_device, dev_entry);
+        res_dev_ptr = list_first_entry(&server->dev_list, struct dhmp_device, dev_entry);
     }
 
     return res_dev_ptr;
@@ -84,8 +77,7 @@ bool dhmp_buddy_system_build(struct dhmp_area *area) {
             free_blk[k]->addr = area->mr->addr + total;
             free_blk[k]->size = size;
             free_blk[k]->mr = area->mr;
-            list_add_tail(&free_blk[k]->free_block_entry,
-                          &area->block_head[i].free_block_list);
+            list_add_tail(&free_blk[k]->free_block_entry, &area->block_head[i].free_block_list);
             total += size;
             INFO_LOG("i %d k %d addr %p", i, k, free_blk[k]->addr);
             k++;
@@ -121,9 +113,7 @@ struct dhmp_area *dhmp_area_create(bool has_buddy_sys, size_t length) {
     }
 
     dev = dhmp_get_dev_from_server();
-    mr = ibv_reg_mr(dev->pd, addr, length,
-                    IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ |
-                        IBV_ACCESS_REMOTE_WRITE);
+    mr = ibv_reg_mr(dev->pd, addr, length, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE);
     if (!mr) {
         ERROR_LOG("ib register mr error.");
         goto out_addr;
@@ -195,16 +185,13 @@ void dhmp_server_init() {
     for (i = 0; i < DHMP_DRAM_HT_SIZE; i++)
         INIT_HLIST_HEAD(&server->dram_ht[i]);
 
-    server->listen_trans = dhmp_transport_create(
-        &server->ctx, dhmp_get_dev_from_server(), true, false);
+    server->listen_trans = dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), true, false);
     if (!server->listen_trans) {
         ERROR_LOG("create rdma transport error.");
         exit(-1);
     }
 
-    err = dhmp_transport_listen(
-        server->listen_trans,
-        server->config.net_infos[server->config.curnet_id].port);
+    err = dhmp_transport_listen(server->listen_trans, server->config.net_infos[server->config.curnet_id].port);
     if (err)
         exit(-1);
 
@@ -216,31 +203,27 @@ void dhmp_server_init() {
     // following handle the replicas
     // TODO replce MACRO with config
 
-    server->replica_listen_transport = dhmp_transport_create(
-        &server->ctx, dhmp_get_dev_from_server(), true, false);
+    server->replica_listen_transport = dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), true, false);
     if (!server->replica_listen_transport) {
         ERROR_LOG("create replica_listen_transport error.");
         exit(-1);
     }
 
-    err = dhmp_transport_listen(server->replica_listen_transport,
-                                server->replica_net_infos->port);
+    err = dhmp_transport_listen(server->replica_listen_transport, server->replica_net_infos->port);
     if (err)
         exit(-1);
 
     // connnect to replicas that has higher replica_id
     for (int i = server->replica_id + 1; i < REPLICAS_NUM; i++) {
         INFO_LOG("create the [%d]-th normal transport.", i);
-        server->replica_transports[i] = dhmp_transport_create(
-            &watcher->ctx, dhmp_get_dev_from_watcher(), false, false);
+        server->replica_transports[i] = dhmp_transport_create(&watcher->ctx, dhmp_get_dev_from_watcher(), false, false);
         if (!server->replica_transports[i]) {
             ERROR_LOG("create the transport to [%d] error.", i);
             continue;
         }
 
         if (i != server->replica_id) {
-            dhmp_transport_connect(server->replica_transports[i],
-                                   server->replica_net_infos[i].addr,
+            dhmp_transport_connect(server->replica_transports[i], server->replica_net_infos[i].addr,
                                    server->replica_net_infos[i].port);
         }
     }
@@ -249,8 +232,7 @@ void dhmp_server_init() {
     for (int i = server->replica_id + 1; i < REPLICAS_NUM; i++) {
         if (server->replica_transports[i] == NULL)
             continue;
-        while (server->replica_transports[i]->trans_state <
-               DHMP_TRANSPORT_STATE_CONNECTED)
+        while (server->replica_transports[i]->trans_state < DHMP_TRANSPORT_STATE_CONNECTED)
             ;
     }
 }

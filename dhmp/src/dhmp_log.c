@@ -1,17 +1,11 @@
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/time.h>
-#include <time.h>
-
-
 #include "dhmp_log.h"
-
 #define LOG_TIME_FMT "%04d/%02d/%02d-%02d:%02d:%02d.%05ld"
 
 enum dhmp_log_level global_log_level = DHMP_LOG_LEVEL_WARN;
 
 const char *const level_str[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
+
+//=============================== public methods ===============================
 
 void dhmp_log_impl(const char *file, unsigned line, const char *func,
                    unsigned log_level, const char *fmt, ...) {

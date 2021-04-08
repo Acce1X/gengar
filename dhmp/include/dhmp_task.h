@@ -1,18 +1,19 @@
 #ifndef DHMP_TASK_H
 #define DHMP_TASK_H
 #include "dhmp.h"
+
 struct dhmp_sge {
-  void *addr;
-  size_t length;
-  uint32_t lkey;
+    void *addr;
+    size_t length;
+    uint32_t lkey;
 };
 
 struct dhmp_task {
-  bool done_flag;
-  struct dhmp_sge sge;
-  struct dhmp_transport *rdma_trans;
-  struct dhmp_send_mr *smr;
-  struct dhmp_addr_info *addr_info;
+    bool done_flag;
+    struct dhmp_sge sge;
+    struct dhmp_transport *rdma_trans;
+    struct dhmp_send_mr *smr;
+    struct dhmp_addr_info *addr_info;
 };
 
 struct dhmp_task *dhmp_recv_task_create(struct dhmp_transport *rdma_trans,

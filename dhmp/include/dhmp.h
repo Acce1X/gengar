@@ -1,11 +1,16 @@
 #ifndef DHMP_H
 #define DHMP_H
 
+#include <arpa/inet.h>
 #include <assert.h>
 #include <infiniband/verbs.h>
 #include <json-c/json.h>
+#include <libxml/parser.h>
 #include <linux/list.h>
+#include <linux/sockios.h>
 #include <math.h>
+#include <net/if.h>
+#include <netinet/in.h>
 #include <numa.h>
 #include <pthread.h>
 #include <rdma/rdma_cma.h>
@@ -16,8 +21,11 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/timerfd.h>
+#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -109,49 +117,5 @@ struct dhmp_dram_info {
     void *nvm_addr;
     struct ibv_mr dram_mr;
 };
-
-/**
- *	dhmp_malloc: remote alloc the size of length region
- */
-void *dhmp_malloc(size_t length);
-
-/**
- *	dhmp_read:read the data from dhmp_addr, write into the local_buf
- */
-int dhmp_read(void *dhmp_addr, void *local_buf, size_t count);
-
-/**
- *	dhmp_write:write the data in local buf into the dhmp_addr position
- */
-int dhmp_write(void *dhmp_addr, void *local_buf, size_t count);
-
-/**
- *	dhmp_free:release remote memory
- */
-void dhmp_free(void *dhmp_addr);
-
-/**
- *	dhmp_client_init:init the dhmp client
- *	note:client connect the all server
- */
-void dhmp_client_init();
-
-/**
- *	dhmp_client_destroy:clean RDMA resources
- */
-void dhmp_client_destroy();
-
-/**
- *	dhmp_server_init:init server
- *	include config.xml read, rdma listen,
- *	register memory, context run.
- */
-void dhmp_server_init();
-
-/**
- *	dhmp_server_destroy: close the context,
- *	clean the rdma resource
- */
-void dhmp_server_destroy();
 
 #endif

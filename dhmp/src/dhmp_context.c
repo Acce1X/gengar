@@ -1,10 +1,7 @@
 #include "dhmp_context.h"
-#include "dhmp.h"
-#include "dhmp_config.h"
-#include "dhmp_hash.h"
 #include "dhmp_log.h"
 
-void *dhmp_context_run(void *data) {
+static void *dhmp_context_run(void *data) {
     struct epoll_event events[DHMP_EPOLL_SIZE];
     struct dhmp_event_data *event_data_ptr;
     struct dhmp_context *ctx = (struct dhmp_context *)data;
@@ -31,6 +28,7 @@ void *dhmp_context_run(void *data) {
     return NULL;
 }
 
+//=============================== public methods ===============================
 int dhmp_context_init(struct dhmp_context *ctx) {
     int retval = 0;
 

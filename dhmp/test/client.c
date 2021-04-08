@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "dhmp.h"
+#include "dhmp_client.h"
 
 #define R 30000
 #define NUM_SIZE 300000

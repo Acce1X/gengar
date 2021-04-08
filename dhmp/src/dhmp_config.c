@@ -1,15 +1,5 @@
-#include <arpa/inet.h>
-#include <libxml/parser.h>
-#include <linux/sockios.h>
-#include <net/if.h>
-#include <netinet/in.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-
-#include "dhmp.h"
 #include "dhmp_config.h"
-#include "dhmp_hash.h"
+#include "dhmp.h"
 #include "dhmp_log.h"
 
 /*these strings in config xml*/
@@ -188,6 +178,7 @@ static void dhmp_set_curnode_id(struct dhmp_config *config_ptr) {
     }
 }
 
+//=============================== public methods ===============================
 int dhmp_config_init(struct dhmp_config *config_ptr, bool is_client) {
     const char *config_file = DHMP_CONFIG_FILE_NAME;
     int index = 0;

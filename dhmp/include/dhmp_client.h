@@ -59,7 +59,40 @@ struct dhmp_client {
     double pre_hit_ratio_max[DHMP_SERVER_NODE_NUM];
 };
 
+/**
+ *	dhmp_malloc: remote alloc the size of length region
+ */
+void *dhmp_malloc(size_t length);
+
+/**
+ *	dhmp_read:read the data from dhmp_addr, write into the local_buf
+ */
+int dhmp_read(void *dhmp_addr, void *local_buf, size_t count);
+
+/**
+ *	dhmp_write:write the data in local buf into the dhmp_addr position
+ */
+int dhmp_write(void *dhmp_addr, void *local_buf, size_t count);
+
+/**
+ *	dhmp_free:release remote memory
+ */
+void dhmp_free(void *dhmp_addr);
+
+/**
+ *	dhmp_client_init:init the dhmp client
+ *	note:client connect the all server
+ */
+void dhmp_client_init();
+
+/**
+ *	dhmp_client_destroy:clean RDMA resources
+ */
+void dhmp_client_destroy();
+
 extern struct dhmp_client *client;
 extern int rdelay, wdelay, knum;
 ;
+
+
 #endif

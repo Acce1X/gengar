@@ -12,45 +12,6 @@
 #include "dhmp_transport.h"
 #include "dhmp_watcher.h"
 
-void *dhmp_transfer_dhmp_addr(struct dhmp_transport *rdma_trans,
-                              void *normal_addr) {
-    long long node_index, ll_addr;
-    int index;
-    void *dhmp_addr;
-
-    for (index = 0; index < DHMP_SERVER_NODE_NUM; index++) {
-        if (rdma_trans == client->connect_trans[index])
-            break;
-    }
-
-    node_index = index;
-
-    if (node_index == 0)
-        return normal_addr;
-
-    node_index = node_index << 48;
-    ll_addr = (long long)normal_addr;
-    ll_addr += node_index;
-    dhmp_addr = (void *)ll_addr;
-
-    return dhmp_addr;
-}
-
-/**
- * dhmp_hash_in_client:cal the addr into hash key
- */
-int dhmp_hash_in_client(void *addr) {
-    uint32_t key;
-    int index;
-
-    key = hash(&addr, sizeof(void *));
-    /*key is a uint32_t value,through below fomula transfer*/
-    index = ((key % DHMP_CLIENT_HT_SIZE) + DHMP_CLIENT_HT_SIZE) %
-            DHMP_CLIENT_HT_SIZE;
-
-    return index;
-}
-
 /**
  *	dhmp_addr_info_insert_ht:
  *	add new addr info into the addr_info_hashtable in client
@@ -65,7 +26,7 @@ static void dhmp_addr_info_insert_ht(void *dhmp_addr,
     hlist_add_head(&addr_info->addr_entry, &client->addr_info_ht[index]);
 }
 
-int dhmp_get_node_index_from_addr(void *dhmp_addr) {
+static int dhmp_get_node_index_from_addr(void *dhmp_addr) {
     long long node_index = (long long)dhmp_addr;
     int res;
     node_index = node_index >> 48;
@@ -73,7 +34,7 @@ int dhmp_get_node_index_from_addr(void *dhmp_addr) {
     return res;
 }
 
-void dhmp_malloc_work_handler(struct dhmp_work *work) {
+static void dhmp_malloc_work_handler(struct dhmp_work *work) {
     struct dhmp_malloc_work *malloc_work;
     struct dhmp_msg msg;
     struct dhmp_mc_request req_msg;
@@ -114,7 +75,7 @@ void dhmp_malloc_work_handler(struct dhmp_work *work) {
     malloc_work->done_flag = true;
 }
 
-void *dhmp_transfer_normal_addr(void *dhmp_addr) {
+static void *dhmp_transfer_normal_addr(void *dhmp_addr) {
     long long node_index, ll_addr;
     void *normal_addr;
 
@@ -129,34 +90,7 @@ void *dhmp_transfer_normal_addr(void *dhmp_addr) {
     return normal_addr;
 }
 
-/**
- *	dhmp_get_addr_info_from_ht:according to addr, find corresponding addr
- *info
- */
-struct dhmp_addr_info *dhmp_get_addr_info_from_ht(int index, void *dhmp_addr) {
-    struct dhmp_addr_info *addr_info;
-    void *normal_addr;
-
-    if (hlist_empty(&client->addr_info_ht[index]))
-        goto out;
-    else {
-        normal_addr = dhmp_transfer_normal_addr(dhmp_addr);
-        hlist_for_each_entry(addr_info, &client->addr_info_ht[index],
-                             addr_entry) {
-            if (addr_info->nvm_mr.addr == normal_addr)
-                break;
-        }
-    }
-
-    if (!addr_info)
-        goto out;
-
-    return addr_info;
-out:
-    return NULL;
-}
-
-void dhmp_free_work_handler(struct dhmp_work *work) {
+static void dhmp_free_work_handler(struct dhmp_work *work) {
     struct dhmp_msg msg;
     struct dhmp_addr_info *addr_info;
     struct dhmp_free_request req_msg;
@@ -196,7 +130,7 @@ out:
     free_work->done_flag = true;
 }
 
-void dhmp_read_work_handler(struct dhmp_work *work) {
+static void dhmp_read_work_handler(struct dhmp_work *work) {
     struct dhmp_addr_info *addr_info;
     struct dhmp_rw_work *rwork;
     int index;
@@ -239,7 +173,7 @@ out:
     rwork->done_flag = true;
 }
 
-void dhmp_write_work_handler(struct dhmp_work *work) {
+static void dhmp_write_work_handler(struct dhmp_work *work) {
     struct dhmp_addr_info *addr_info;
     struct dhmp_rw_work *wwork;
     int index;
@@ -284,7 +218,7 @@ out:
     wwork->done_flag = true;
 }
 
-dhmp_close_work_handler(struct dhmp_work *work) {
+static void dhmp_close_work_handler(struct dhmp_work *work) {
     struct dhmp_close_work *cwork;
     struct dhmp_msg msg;
     int tmp = 0;
@@ -299,6 +233,8 @@ dhmp_close_work_handler(struct dhmp_work *work) {
 
     cwork->done_flag = true;
 }
+
+//=============================== public methods ===============================
 
 void *dhmp_work_handle_thread(void *data) {
     struct dhmp_work *work;
@@ -341,5 +277,71 @@ void *dhmp_work_handle_thread(void *data) {
         }
     }
 
+    return NULL;
+}
+
+void *dhmp_transfer_dhmp_addr(struct dhmp_transport *rdma_trans,
+                              void *normal_addr) {
+    long long node_index, ll_addr;
+    int index;
+    void *dhmp_addr;
+
+    for (index = 0; index < DHMP_SERVER_NODE_NUM; index++) {
+        if (rdma_trans == client->connect_trans[index])
+            break;
+    }
+
+    node_index = index;
+
+    if (node_index == 0)
+        return normal_addr;
+
+    node_index = node_index << 48;
+    ll_addr = (long long)normal_addr;
+    ll_addr += node_index;
+    dhmp_addr = (void *)ll_addr;
+
+    return dhmp_addr;
+}
+
+/**
+ * dhmp_hash_in_client:cal the addr into hash key
+ */
+int dhmp_hash_in_client(void *addr) {
+    uint32_t key;
+    int index;
+
+    key = hash(&addr, sizeof(void *));
+    /*key is a uint32_t value,through below fomula transfer*/
+    index = ((key % DHMP_CLIENT_HT_SIZE) + DHMP_CLIENT_HT_SIZE) %
+            DHMP_CLIENT_HT_SIZE;
+
+    return index;
+}
+
+/**
+ *	dhmp_get_addr_info_from_ht:according to addr, find corresponding addr
+ *info
+ */
+struct dhmp_addr_info *dhmp_get_addr_info_from_ht(int index, void *dhmp_addr) {
+    struct dhmp_addr_info *addr_info;
+    void *normal_addr;
+
+    if (hlist_empty(&client->addr_info_ht[index]))
+        goto out;
+    else {
+        normal_addr = dhmp_transfer_normal_addr(dhmp_addr);
+        hlist_for_each_entry(addr_info, &client->addr_info_ht[index],
+                             addr_entry) {
+            if (addr_info->nvm_mr.addr == normal_addr)
+                break;
+        }
+    }
+
+    if (!addr_info)
+        goto out;
+
+    return addr_info;
+out:
     return NULL;
 }

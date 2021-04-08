@@ -1,16 +1,7 @@
 #include "dhmp_poll.h"
-#include "dhmp.h"
 #include "dhmp_client.h"
-#include "dhmp_config.h"
-#include "dhmp_context.h"
-#include "dhmp_dev.h"
-#include "dhmp_hash.h"
 #include "dhmp_log.h"
-#include "dhmp_task.h"
-#include "dhmp_timerfd.h"
 #include "dhmp_transport.h"
-#include "dhmp_watcher.h"
-#include "dhmp_work.h"
 
 struct dhmp_nvm_info hot_nvm[DHMP_SERVER_NODE_NUM][DHMP_MAX_OBJ_NUM],
     cold_nvm[DHMP_SERVER_NODE_NUM][DHMP_MAX_OBJ_NUM];
@@ -21,7 +12,7 @@ int max_cnt_test = 0;
 /**
  * use for compare function.
  */
-int comp_sort_addr_entry(const void *a, const void *b) {
+static int comp_sort_addr_entry(const void *a, const void *b) {
     struct dhmp_sort_addr_entry *sae_a, *sae_b;
     sae_a = (struct dhmp_sort_addr_entry *)a;
     sae_b = (struct dhmp_sort_addr_entry *)b;
@@ -29,7 +20,7 @@ int comp_sort_addr_entry(const void *a, const void *b) {
     return sae_a->rwcnt - sae_b->rwcnt;
 }
 
-void dhmp_handle_cache_model(int node_index, int length) {
+static void dhmp_handle_cache_model(int node_index, int length) {
     int start, end;
     start = 0;
     end = length - 1;
@@ -79,6 +70,8 @@ void dhmp_handle_cache_model(int node_index, int length) {
         --start;
     }
 }
+
+//=============================== public methods ===============================
 
 void dhmp_poll_ht_func(void) {
     struct dhmp_addr_info *addr_info;
