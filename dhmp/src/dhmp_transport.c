@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <infiniband/verbs.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <rdma/rdma_cma.h>
 
 #include "dhmp.h"
@@ -1182,7 +1183,13 @@ static int dhmp_replica_addr_to_id(struct sockaddr_in *sock) {
     }
     return -1;
 }
-
+/**
+ * @brief callback function to deal with cm_event RDMA_CM_CONNECTION_REQUEST
+ *
+ * @param[in] event rdma_cm_event polled from event channel
+ * @param[in] rdma_trans listening transports, which is actually referenced by both id and listen_id in rdma_event
+ * @return int
+ */
 static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans) {
     struct dhmp_transport *new_trans, *normal_trans;
     struct rdma_conn_param conn_param;
@@ -1195,14 +1202,16 @@ static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transp
             normal_trans=list_entry(server->client_list.prev, struct
     dhmp_transport, client_entry);
     */
-
+    // XXX can be replaced by flg
     if (rdma_trans == server->listen_trans) {
         normal_trans = dhmp_is_exist_connection(&event->id->route.addr.dst_sin);
         if (normal_trans) {
+            // XXX dhmp_transport_create is_poll etc. can be optimized
             new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, false, true);
         } else {
             new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, false, false);
         }
+        new_trans->cls_flg |= CLIENT;
         if (!new_trans) {
             ERROR_LOG("rdma trans process connect request error.");
             return -1;
@@ -1247,34 +1256,36 @@ static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transp
         new_trans->trans_state = DHMP_TRANSPORT_STATE_CONNECTING;
         dhmp_post_all_recv(new_trans);
         return retval;
-
     } else if (rdma_trans == server->replica_listen_transport) {
         int replica_id;
+        // XXX if maybe redundant
         normal_trans = dhmp_replica_is_exist_connection(&event->id->route.addr.dst_sin);
-        if (normal_trans) // exsiting client conn -> new polling conn
-        {
+        if (normal_trans) { // exsiting client conn -> new polling conn
             DEBUG_LOG("duplicated replica transport connnection request");
             return -1;
         } else {
             new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, false, false);
+            new_trans->cls_flg |= REPLICA;
             if (!new_trans) {
                 ERROR_LOG("rdma trans process connect request error.");
                 return -1;
             }
             new_trans->cm_id = event->id;
-            event->id->context = new_trans;
+            new_trans->cm_id->context = new_trans;
             retval = dhmp_qp_create(new_trans);
             if (retval) {
                 ERROR_LOG("dhmp qp create error.");
                 goto out;
             }
 
+            // XXX more efficient way for addr to replica_id?
             replica_id = dhmp_replica_addr_to_id(&event->id->route.addr.dst_sin);
             if (replica_id < 0) {
                 ERROR_LOG("dhmp qp create error.");
                 goto out;
             }
 
+            // XXX redundant lock?
             pthread_mutex_lock(&server->mutex_replica_list);
             server->replica_transports[replica_id] = new_trans;
             pthread_mutex_unlock(&server->mutex_replica_list);
@@ -1293,7 +1304,7 @@ static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transp
 
             new_trans->trans_state = DHMP_TRANSPORT_STATE_CONNECTING;
 
-            // What's the points?
+            // XXX What's the points?
             dhmp_post_all_recv(new_trans);
             return retval;
         }
@@ -1307,10 +1318,17 @@ static int on_cm_established(struct rdma_cm_event *event, struct dhmp_transport 
     int retval = 0;
 
     memcpy(&rdma_trans->local_addr, &rdma_trans->cm_id->route.addr.src_sin, sizeof(rdma_trans->local_addr));
-
     memcpy(&rdma_trans->peer_addr, &rdma_trans->cm_id->route.addr.dst_sin, sizeof(rdma_trans->peer_addr));
-
     rdma_trans->trans_state = DHMP_TRANSPORT_STATE_CONNECTED;
+
+    char buf[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(rdma_trans->peer_addr.sin_addr), buf, sizeof(buf));
+    DEBUG_LOG("connection established with %s", buf);
+
+    if (rdma_trans->cls_flg & REPLICA) {
+        // XXX would the trans_state not be DHMP_TRANSPORT_STATE_CONNECTING?
+        // pthread_mutex_unlock(&rdma_trans->replica_conn_lock);
+    }
     return retval;
 }
 
@@ -1336,12 +1354,18 @@ static void dhmp_destroy_source(struct dhmp_transport *rdma_trans) {
 static int on_cm_disconnected(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans) {
     dhmp_destroy_source(rdma_trans);
     rdma_trans->trans_state = DHMP_TRANSPORT_STATE_DISCONNECTED;
-    if (server != NULL && rdma_trans != server->watcher_trans) {
-        --server->cur_connections;
-        pthread_mutex_lock(&server->mutex_client_list);
-        list_del(&rdma_trans->client_entry);
-        pthread_mutex_unlock(&server->mutex_client_list);
-        dhmp_inform_watcher_func(server->watcher_trans);
+    if (server != NULL) {
+        if (rdma_trans != server->watcher_trans) {
+            --server->cur_connections;
+            pthread_mutex_lock(&server->mutex_client_list);
+            list_del(&rdma_trans->client_entry);
+            pthread_mutex_unlock(&server->mutex_client_list);
+            dhmp_inform_watcher_func(server->watcher_trans);
+        } else if (rdma_trans->cls_flg & REPLICA) {
+            char buf[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(rdma_trans->peer_addr.sin_addr), buf, sizeof(buf));
+            DEBUG_LOG("replica disconnect with %s", buf);
+        }
     }
 
     return 0;
@@ -1350,13 +1374,22 @@ static int on_cm_disconnected(struct rdma_cm_event *event, struct dhmp_transport
 static int on_cm_error(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans) {
     dhmp_destroy_source(rdma_trans);
     rdma_trans->trans_state = DHMP_TRANSPORT_STATE_ERROR;
-    if (server != NULL && rdma_trans != server->watcher_trans) {
-        --server->cur_connections;
-        pthread_mutex_lock(&server->mutex_client_list);
-        list_del(&rdma_trans->client_entry);
-        pthread_mutex_unlock(&server->mutex_client_list);
-        dhmp_inform_watcher_func(server->watcher_trans);
+    if (server != NULL) {
+        if (rdma_trans != server->watcher_trans) {
+            --server->cur_connections;
+            pthread_mutex_lock(&server->mutex_client_list);
+            list_del(&rdma_trans->client_entry);
+            pthread_mutex_unlock(&server->mutex_client_list);
+            dhmp_inform_watcher_func(server->watcher_trans);
+        } else if (rdma_trans->cls_flg & REPLICA) {
+            char buf[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(rdma_trans->peer_addr.sin_addr), buf, sizeof(buf));
+            DEBUG_LOG("replica connect error with %s", buf);
+            // XXX would the trans_state not be DHMP_TRANSPORT_STATE_CONNECTING?
+            //  pthread_mutex_unlock(&rdma_trans->replica_conn_lock);
+        }
     }
+
     return 0;
 }
 
@@ -1600,6 +1633,14 @@ struct dhmp_transport *dhmp_transport_create(struct dhmp_context *ctx, struct dh
             goto out_send_mr;
 
         rdma_trans->is_poll_qp = is_poll_qp;
+    }
+
+    if (is_listen) {
+        rdma_trans->cls_flg = LISTEN;
+    } else if (is_poll_qp) {
+        rdma_trans->cls_flg = POLL;
+    } else {
+        rdma_trans->cls_flg = NORMAL;
     }
 
     return rdma_trans;

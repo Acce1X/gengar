@@ -4,6 +4,8 @@
 #include "dhmp_log.h"
 #include "dhmp_transport.h"
 #include "dhmp_watcher.h"
+#include <pthread.h>
+#include <rdma/rdma_cma.h>
 
 // 4KB:4096,8192,16384,32768,65536,131072,262144
 // 8KB:8192,16384,32768,65536,131072,262144,524288
@@ -203,38 +205,36 @@ void dhmp_server_init() {
     // following handle the replicas
     // TODO replce MACRO with config
 
+    memset(server->replica_transports, 0, REPLICAS_NUM * sizeof(struct dhmp_transport *));
+
+    // listen the higher # replica
     server->replica_listen_transport = dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), true, false);
+    server->replica_listen_transport->cls_flg |= REPLICA;
     if (!server->replica_listen_transport) {
         ERROR_LOG("create replica_listen_transport error.");
         exit(-1);
     }
-
     err = dhmp_transport_listen(server->replica_listen_transport, server->replica_net_infos->port);
-    if (err)
+    if (err) {
         exit(-1);
-
-    // connnect to replicas that has higher replica_id
-    for (int i = server->replica_id + 1; i < REPLICAS_NUM; i++) {
-        INFO_LOG("create the [%d]-th normal transport.", i);
-        server->replica_transports[i] = dhmp_transport_create(&watcher->ctx, dhmp_get_dev_from_watcher(), false, false);
-        if (!server->replica_transports[i]) {
-            ERROR_LOG("create the transport to [%d] error.", i);
-            continue;
-        }
-
-        if (i != server->replica_id) {
-            dhmp_transport_connect(server->replica_transports[i], server->replica_net_infos[i].addr,
-                                   server->replica_net_infos[i].port);
-        }
     }
 
+    // connect the lower # replica
+    for (int i = server->replica_id; i > 1; i--) {
+        server->replica_transports[i] = dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), false, false);
+        server->replica_transports[i]->replica_id = i;
+        dhmp_transport_connect(server->replica_transports[i], server->replica_net_infos->addr,
+                               server->replica_net_infos->port);
+    }
+
+    // TODO sychronized for all(?) replicas connection to be established
     // polling to wait for connection establishment compeleted
-    for (int i = server->replica_id + 1; i < REPLICAS_NUM; i++) {
-        if (server->replica_transports[i] == NULL)
-            continue;
-        while (server->replica_transports[i]->trans_state < DHMP_TRANSPORT_STATE_CONNECTED)
-            ;
-    }
+    // for (int i = server->replica_id + 1; i < REPLICAS_NUM; i++) {
+    //     if (server->replica_transports[i] == NULL)
+    //         continue;
+    //     while (server->replica_transports[i]->trans_state < DHMP_TRANSPORT_STATE_CONNECTED) {
+    //     };
+    // }
 }
 
 void dhmp_server_destroy() {

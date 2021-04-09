@@ -15,8 +15,7 @@ static struct dhmp_transport *dhmp_node_select() {
             client->fifo_node_index = 0;
 
         if (client->connect_trans[client->fifo_node_index] != NULL &&
-            (client->connect_trans[client->fifo_node_index]->trans_state ==
-             DHMP_TRANSPORT_STATE_CONNECTED)) {
+            (client->connect_trans[client->fifo_node_index]->trans_state == DHMP_TRANSPORT_STATE_CONNECTED)) {
             ++client->fifo_node_index;
             return client->connect_trans[client->fifo_node_index - 1];
         }
@@ -36,8 +35,7 @@ static struct dhmp_transport *dhmp_get_trans_from_addr(void *dhmp_addr) {
 static struct dhmp_device *dhmp_get_dev_from_client() {
     struct dhmp_device *res_dev_ptr = NULL;
     if (!list_empty(&client->dev_list)) {
-        res_dev_ptr =
-            list_first_entry(&client->dev_list, struct dhmp_device, dev_entry);
+        res_dev_ptr = list_first_entry(&client->dev_list, struct dhmp_device, dev_entry);
     }
 
     return res_dev_ptr;
@@ -96,53 +94,46 @@ void dhmp_client_init() {
     INIT_LIST_HEAD(&client->send_mr_list);
 
     /*init normal connection*/
-    memset(client->connect_trans, 0,
-           DHMP_SERVER_NODE_NUM * sizeof(struct dhmp_transport *));
+    memset(client->connect_trans, 0, DHMP_SERVER_NODE_NUM * sizeof(struct dhmp_transport *));
     for (i = 0; i < client->config.nets_cnt; i++) {
         INFO_LOG("create the [%d]-th normal transport.", i);
-        client->connect_trans[i] = dhmp_transport_create(
-            &client->ctx, dhmp_get_dev_from_client(), false, false);
+        client->connect_trans[i] = dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), false, false);
         if (!client->connect_trans[i]) {
             ERROR_LOG("create the [%d]-th transport error.", i);
             continue;
         }
         client->connect_trans[i]->node_id = i;
-        dhmp_transport_connect(client->connect_trans[i],
-                               client->config.net_infos[i].addr,
+        dhmp_transport_connect(client->connect_trans[i], client->config.net_infos[i].addr,
                                client->config.net_infos[i].port);
     }
 
+    // XXX polling to wait for synchronize
     for (i = 0; i < client->config.nets_cnt; i++) {
         if (client->connect_trans[i] == NULL)
             continue;
-        while (client->connect_trans[i]->trans_state <
-               DHMP_TRANSPORT_STATE_CONNECTED)
+        while (client->connect_trans[i]->trans_state < DHMP_TRANSPORT_STATE_CONNECTED)
             ;
     }
 
     /*init the poll connection*/
-    memset(client->poll_trans, 0,
-           DHMP_SERVER_NODE_NUM * sizeof(struct dhmp_transport *));
+    memset(client->poll_trans, 0, DHMP_SERVER_NODE_NUM * sizeof(struct dhmp_transport *));
     for (i = 0; i < client->config.nets_cnt; i++) {
         INFO_LOG("create the [%d]-th poll transport.", i);
-        client->poll_trans[i] = dhmp_transport_create(
-            &client->ctx, dhmp_get_dev_from_client(), false, true);
+        client->poll_trans[i] = dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), false, true);
 
         if (!client->poll_trans[i]) {
             ERROR_LOG("create the [%d]-th transport error.", i);
             continue;
         }
         client->poll_trans[i]->node_id = i;
-        dhmp_transport_connect(client->poll_trans[i],
-                               client->config.net_infos[i].addr,
+        dhmp_transport_connect(client->poll_trans[i], client->config.net_infos[i].addr,
                                client->config.net_infos[i].port);
     }
 
     for (i = 0; i < client->config.nets_cnt; i++) {
         if (client->poll_trans[i] == NULL)
             continue;
-        while (client->poll_trans[i]->trans_state <
-               DHMP_TRANSPORT_STATE_CONNECTED)
+        while (client->poll_trans[i]->trans_state < DHMP_TRANSPORT_STATE_CONNECTED)
             ;
     }
 
@@ -175,23 +166,20 @@ void dhmp_client_init() {
 
 #ifdef DHMP_CACHE_POLICY
     client->poll_ht_fd = dhmp_timerfd_create(&poll_its);
-    pthread_create(&client->poll_ht_thread, NULL, dhmp_poll_ht_thread,
-                   (void *)client);
+    pthread_create(&client->poll_ht_thread, NULL, dhmp_poll_ht_thread, (void *)client);
 #endif
 
     /*init the structure about work thread*/
     pthread_mutex_init(&client->mutex_work_list, NULL);
     INIT_LIST_HEAD(&client->work_list);
-    pthread_create(&client->work_thread, NULL, dhmp_work_handle_thread,
-                   (void *)client);
+    pthread_create(&client->work_thread, NULL, dhmp_work_handle_thread, (void *)client);
 }
 
 static void dhmp_close_connection(struct dhmp_transport *rdma_trans) {
     struct dhmp_close_work close_work;
     struct dhmp_work *work;
 
-    if (rdma_trans == NULL ||
-        rdma_trans->trans_state != DHMP_TRANSPORT_STATE_CONNECTED)
+    if (rdma_trans == NULL || rdma_trans->trans_state != DHMP_TRANSPORT_STATE_CONNECTED)
         return;
 
     work = malloc(sizeof(struct dhmp_work));
@@ -230,16 +218,14 @@ void dhmp_client_destroy() {
     for (i = 0; i < client->config.nets_cnt; i++) {
         if (client->connect_trans[i] == NULL)
             continue;
-        while (client->connect_trans[i]->trans_state ==
-               DHMP_TRANSPORT_STATE_CONNECTED)
+        while (client->connect_trans[i]->trans_state == DHMP_TRANSPORT_STATE_CONNECTED)
             ;
     }
 
     for (i = 0; i < client->config.nets_cnt; i++) {
         if (client->poll_trans[i] == NULL)
             continue;
-        while (client->poll_trans[i]->trans_state ==
-               DHMP_TRANSPORT_STATE_CONNECTED)
+        while (client->poll_trans[i]->trans_state == DHMP_TRANSPORT_STATE_CONNECTED)
             ;
     }
 
@@ -320,8 +306,7 @@ void dhmp_free(void *dhmp_addr) {
     }
 
     rdma_trans = dhmp_get_trans_from_addr(dhmp_addr);
-    if (!rdma_trans ||
-        rdma_trans->trans_state != DHMP_TRANSPORT_STATE_CONNECTED) {
+    if (!rdma_trans || rdma_trans->trans_state != DHMP_TRANSPORT_STATE_CONNECTED) {
         ERROR_LOG("rdma connection error.");
         return;
     }
@@ -356,8 +341,7 @@ int dhmp_read(void *dhmp_addr, void *local_buf, size_t count) {
 
     rdma_trans = dhmp_get_trans_from_addr(dhmp_addr);
     ;
-    if (!rdma_trans ||
-        rdma_trans->trans_state != DHMP_TRANSPORT_STATE_CONNECTED) {
+    if (!rdma_trans || rdma_trans->trans_state != DHMP_TRANSPORT_STATE_CONNECTED) {
         ERROR_LOG("rdma connection error.");
         return -1;
     }
@@ -395,8 +379,7 @@ int dhmp_write(void *dhmp_addr, void *local_buf, size_t count) {
     struct dhmp_work *work;
 
     rdma_trans = dhmp_get_trans_from_addr(dhmp_addr);
-    if (!rdma_trans ||
-        rdma_trans->trans_state != DHMP_TRANSPORT_STATE_CONNECTED) {
+    if (!rdma_trans || rdma_trans->trans_state != DHMP_TRANSPORT_STATE_CONNECTED) {
         ERROR_LOG("rdma connection error.");
         return -1;
     }

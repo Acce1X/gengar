@@ -66,11 +66,12 @@ struct dhmp_server {
 
     struct hlist_head dram_ht[DHMP_DRAM_HT_SIZE];
 
-    /*replicas infos*/
+    /*replicas infos*/ // TODO init
     struct dhmp_transport *replica_listen_transport;
     struct dhmp_transport *replica_transports[REPLICAS_NUM];
+    pthread_mutex_t mutex_replica_list;
     int replica_id;
-    pthread_mutex_t mutex_replica_list; // TODO init
+
     int replica_cnt;
     struct dhmp_net_info replica_net_infos[REPLICAS_NUM];
 };

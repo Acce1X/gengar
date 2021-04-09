@@ -1,6 +1,8 @@
 #ifndef DHMP_TRANSPORT_H
 #define DHMP_TRANSPORT_H
 #include "dhmp.h"
+#include "dhmp_client.h"
+#include <infiniband/verbs.h>
 #define ADDR_RESOLVE_TIMEOUT 500
 #define ROUTE_RESOLVE_TIMEOUT 500
 
@@ -38,11 +40,21 @@ struct dhmp_mr {
     struct ibv_mr *mr;
 };
 
+typedef enum dhmp_transport_class_flag {
+    REPLICA = 1 << 1,
+    CLIENT = 1 << 2,
+    POLL = 1 << 3,
+    LISTEN = 1 << 4,
+    NORMAL = 1 << 5,
+} dhmp_transport_class_flag;
+
 struct dhmp_transport {
     struct sockaddr_in peer_addr;
     struct sockaddr_in local_addr;
-
-    int node_id;
+    union {
+        int node_id;
+        int replica_id;
+    };
     enum dhmp_transport_state trans_state;
     struct dhmp_context *ctx;
     struct dhmp_device *device;
@@ -62,7 +74,12 @@ struct dhmp_transport {
     long nvm_used_size;
 
     struct list_head client_entry;
-    struct list_head replica_entry;
+
+    // replica control
+    pthread_mutex_t conn_lock; // avoid duplicated
+
+    // XXX maybe not necessary?
+    dhmp_transport_class_flag cls_flg;
 };
 
 struct dhmp_send_mr {
@@ -70,26 +87,21 @@ struct dhmp_send_mr {
     struct list_head send_mr_entry;
 };
 
-struct dhmp_transport *dhmp_transport_create(struct dhmp_context *ctx,
-                                             struct dhmp_device *dev,
-                                             bool is_listen, bool is_poll_qp);
+struct dhmp_transport *dhmp_transport_create(struct dhmp_context *ctx, struct dhmp_device *dev, bool is_listen,
+                                             bool is_poll_qp);
 
 void dhmp_transport_destroy(struct dhmp_transport *rdma_trans);
 
-int dhmp_transport_connect(struct dhmp_transport *rdma_trans, const char *url,
-                           int port);
+int dhmp_transport_connect(struct dhmp_transport *rdma_trans, const char *url, int port);
 
 int dhmp_transport_listen(struct dhmp_transport *rdma_trans, int listen_port);
 
-void dhmp_post_send(struct dhmp_transport *rdma_trans,
-                    struct dhmp_msg *msg_ptr);
+void dhmp_post_send(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg_ptr);
 
 void dhmp_post_recv(struct dhmp_transport *rdma_trans, void *addr);
 
-int dhmp_rdma_write(struct dhmp_transport *rdma_trans,
-                    struct dhmp_addr_info *addr_info, struct ibv_mr *mr,
+int dhmp_rdma_write(struct dhmp_transport *rdma_trans, struct dhmp_addr_info *addr_info, struct ibv_mr *mr,
                     void *local_addr, int length);
 
-int dhmp_rdma_read(struct dhmp_transport *rdma_trans, struct ibv_mr *mr,
-                   void *local_addr, int length);
+int dhmp_rdma_read(struct dhmp_transport *rdma_trans, struct ibv_mr *mr, void *local_addr, int length);
 #endif
