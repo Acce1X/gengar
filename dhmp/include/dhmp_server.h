@@ -10,8 +10,6 @@
 
 #define DHMP_DRAM_HT_SIZE 251
 
-#define REPLICAS_NUM 2
-
 extern const size_t buddy_size[MAX_ORDER];
 
 struct dhmp_free_block {

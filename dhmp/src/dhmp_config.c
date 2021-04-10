@@ -14,6 +14,11 @@
 #define DHMP_WDELAY_STR "wdelay"
 #define DHMP_KNUM_STR "knum"
 
+#define DHMP_REPLICA_ID_STR "replica_id"
+#define DHMP_REPLICA_ADDR_STR "replica_addr"
+#define DHMP_REPLICA_NIC_STR "replica_nic"
+#define DHMP_REPLICA_PORT_STR "replica_port"
+
 #define DHMP_WATCHER_STR "watcher"
 
 static void dhmp_print_config(struct dhmp_config *total_config_ptr) {
@@ -28,8 +33,7 @@ static void dhmp_print_config(struct dhmp_config *total_config_ptr) {
     }
 }
 
-static int dhmp_parse_watcher_node(struct dhmp_config *config_ptr, int index,
-                                   xmlDocPtr doc, xmlNodePtr curnode) {
+static int dhmp_parse_watcher_node(struct dhmp_config *config_ptr, int index, xmlDocPtr doc, xmlNodePtr curnode) {
     xmlChar *val;
     int log_level = 0;
 
@@ -37,8 +41,7 @@ static int dhmp_parse_watcher_node(struct dhmp_config *config_ptr, int index,
     while (curnode != NULL) {
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_ADDR_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
-            memcpy(config_ptr->watcher_addr, (const void *)val,
-                   strlen((const char *)val) + 1);
+            memcpy(config_ptr->watcher_addr, (const void *)val, strlen((const char *)val) + 1);
             xmlFree(val);
         }
 
@@ -54,8 +57,7 @@ static int dhmp_parse_watcher_node(struct dhmp_config *config_ptr, int index,
     return 0;
 }
 
-static int dhmp_parse_client_node(struct dhmp_config *config_ptr, int index,
-                                  xmlDocPtr doc, xmlNodePtr curnode) {
+static int dhmp_parse_client_node(struct dhmp_config *config_ptr, int index, xmlDocPtr doc, xmlNodePtr curnode) {
     xmlChar *val;
     int log_level = 0;
 
@@ -74,23 +76,20 @@ static int dhmp_parse_client_node(struct dhmp_config *config_ptr, int index,
     return 0;
 }
 
-static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index,
-                                  xmlDocPtr doc, xmlNodePtr curnode) {
+static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index, xmlDocPtr doc, xmlNodePtr curnode) {
     xmlChar *val;
 
     curnode = curnode->xmlChildrenNode;
     while (curnode != NULL) {
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_NIC_NAME_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
-            memcpy(config_ptr->net_infos[index].nic_name, (const void *)val,
-                   strlen((const char *)val) + 1);
+            memcpy(config_ptr->net_infos[index].nic_name, (const void *)val, strlen((const char *)val) + 1);
             xmlFree(val);
         }
 
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_ADDR_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
-            memcpy(config_ptr->net_infos[index].addr, (const void *)val,
-                   strlen((const char *)val) + 1);
+            memcpy(config_ptr->net_infos[index].addr, (const void *)val, strlen((const char *)val) + 1);
             xmlFree(val);
         }
 
@@ -115,6 +114,33 @@ static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index,
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_KNUM_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
             config_ptr->simu_infos[index].knum = atoi((const char *)val);
+            xmlFree(val);
+        }
+
+        if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_KNUM_STR)) {
+            val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
+            config_ptr->simu_infos[index].knum = atoi((const char *)val);
+            xmlFree(val);
+        }
+
+        if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_REPLICA_ID_STR)) {
+            val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
+            config_ptr->replica_infos[index].replica_id = atoi((const char *)val);
+            xmlFree(val);
+        }
+        if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_REPLICA_NIC_STR)) {
+            val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
+            memcpy(config_ptr->replica_infos[index].nic_name, (const void *)val, strlen((const char *)val) + 1);
+            xmlFree(val);
+        }
+        if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_REPLICA_ADDR_STR)) {
+            val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
+            memcpy(config_ptr->replica_infos[index].addr, (const void *)val, strlen((const char *)val) + 1);
+            xmlFree(val);
+        }
+        if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_REPLICA_PORT_STR)) {
+            val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
+            config_ptr->replica_infos[index].port = atoi((const char *)val);
             xmlFree(val);
         }
 
@@ -145,10 +171,8 @@ static void dhmp_set_curnode_id(struct dhmp_config *config_ptr) {
             sin = (struct sockaddr_in *)(&ifr->ifr_addr);
 
             ioctl(socketfd, SIOCGIFFLAGS, ifr);
-            if (((ifr->ifr_flags & IFF_LOOPBACK) == 0) &&
-                (ifr->ifr_flags & IFF_UP) &&
-                (strcmp(ifr->ifr_name, config_ptr->net_infos[k].nic_name) ==
-                 0)) {
+            if (((ifr->ifr_flags & IFF_LOOPBACK) == 0) && (ifr->ifr_flags & IFF_UP) &&
+                (strcmp(ifr->ifr_name, config_ptr->net_infos[k].nic_name) == 0)) {
                 INFO_LOG("%s %s", ifr->ifr_name, inet_ntoa(sin->sin_addr));
                 addr = inet_ntoa(sin->sin_addr);
                 break;

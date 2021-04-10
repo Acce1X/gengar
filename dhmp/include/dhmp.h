@@ -47,6 +47,8 @@
 #define DHMP_RTT_TIME (6000)
 #define DHMP_DRAM_RW_TIME (260)
 
+#define REPLICAS_NUM 2
+
 #define max(a, b) (a > b ? a : b)
 #define min(a, b) (a > b ? b : a)
 

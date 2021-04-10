@@ -2,6 +2,7 @@
 #define DHMP_CONFIG_H
 
 #include "dhmp.h"
+
 #define DHMP_CONFIG_FILE_NAME "config.xml"
 #define DHMP_ADDR_LEN 18
 #define DHMA_NIC_NAME_LEN 10
@@ -19,6 +20,13 @@ struct dhmp_simu_info {
     int knum;
 };
 
+struct dhmp_replica_info {
+    int replica_id;
+    char nic_name[DHMA_NIC_NAME_LEN];
+    char addr[DHMP_ADDR_LEN];
+    int port;
+};
+
 struct dhmp_config {
     struct dhmp_net_info net_infos[DHMP_SERVER_NODE_NUM];
     struct dhmp_simu_info simu_infos[DHMP_SERVER_NODE_NUM];
@@ -26,8 +34,7 @@ struct dhmp_config {
     int nets_cnt;  // current include total server nodes
     char watcher_addr[DHMP_ADDR_LEN];
     int watcher_port;
-
-    // struct dhmp_net_info replica_net_infos[REPLICAS_NUM];
+    struct dhmp_replica_info replica_infos[REPLICAS_NUM];
 };
 
 /**
