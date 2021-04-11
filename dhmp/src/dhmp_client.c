@@ -103,8 +103,7 @@ void dhmp_client_init() {
             continue;
         }
         client->connect_trans[i]->node_id = i;
-        dhmp_transport_connect(client->connect_trans[i], client->config.net_infos[i].addr,
-                               client->config.net_infos[i].port);
+        //   dhmp_transport_connect(client->connect_trans[i], );
     }
 
     // XXX polling to wait for synchronize
@@ -117,7 +116,7 @@ void dhmp_client_init() {
 
     /*init the poll connection*/
     memset(client->poll_trans, 0, DHMP_SERVER_NODE_NUM * sizeof(struct dhmp_transport *));
-    for (i = 0; i < client->config.nets_cnt; i++) {
+    for (i = 0; i < client->config.groups_cnt; i++) {
         INFO_LOG("create the [%d]-th poll transport.", i);
         client->poll_trans[i] = dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), false, true);
 
@@ -126,11 +125,13 @@ void dhmp_client_init() {
             continue;
         }
         client->poll_trans[i]->node_id = i;
-        dhmp_transport_connect(client->poll_trans[i], client->config.net_infos[i].addr,
-                               client->config.net_infos[i].port);
+
+        int server_id = client->config.group_infos[i].member_ids[0];
+        dhmp_transport_connect(client->poll_trans[i], client->config.server_infos[server_id].net_info.addr,
+                               client->config.server_infos[server_id].net_info.port);
     }
 
-    for (i = 0; i < client->config.nets_cnt; i++) {
+    for (i = 0; i < client->config.groups_cnt; i++) {
         if (client->poll_trans[i] == NULL)
             continue;
         while (client->poll_trans[i]->trans_state < DHMP_TRANSPORT_STATE_CONNECTED)

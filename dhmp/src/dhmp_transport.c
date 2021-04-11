@@ -68,7 +68,6 @@ static void dhmp_qp_release(struct dhmp_transport *rdma_trans);
 static int on_cm_addr_resolved(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans);
 static int on_cm_route_resolved(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans);
 static struct dhmp_transport *dhmp_is_exist_connection(struct sockaddr_in *sock);
-static struct dhmp_transport *dhmp_replica_is_exist_connection(struct sockaddr_in *sock);
 static int dhmp_replica_addr_to_id(struct sockaddr_in *sock);
 
 static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans);
@@ -1131,35 +1130,6 @@ static struct dhmp_transport *dhmp_is_exist_connection(struct sockaddr_in *sock)
 
 /**
  * @brief
- * check if the incoming request is exsiting
- * @param[in] sock addr info
- * @return struct dhmp_transport* pointer to the exsiting transport or NULL for
- * non-exsiting
- */
-static struct dhmp_transport *dhmp_replica_is_exist_connection(struct sockaddr_in *sock) {
-    char cur_ip[INET_ADDRSTRLEN], travers_ip[INET_ADDRSTRLEN];
-    struct dhmp_transport *res_trans = NULL;
-    struct in_addr in = sock->sin_addr;
-    int cur_ip_len, travers_ip_len;
-
-    inet_ntop(AF_INET, &(sock->sin_addr), cur_ip, sizeof(cur_ip));
-    cur_ip_len = strlen(cur_ip);
-
-    pthread_mutex_lock(&server->mutex_replica_list);
-    for (int i = 0; i < REPLICAS_NUM; i++) {
-        inet_ntop(AF_INET, &(server->replica_transports[i]->peer_addr.sin_addr), travers_ip, sizeof(travers_ip));
-        travers_ip_len = strlen(travers_ip);
-        if (memcmp(cur_ip, travers_ip, max(cur_ip_len, travers_ip_len)) == 0) {
-            INFO_LOG("find the same replica connection.");
-            res_trans = server->replica_transports[i];
-            break;
-        }
-    }
-    pthread_mutex_unlock(&server->mutex_replica_list);
-    return res_trans;
-}
-/**
- * @brief
  * map the incoming replica's connection request to it's replica_id according to
  * the config file
  * @param sock incoming request's addr
@@ -1173,12 +1143,13 @@ static int dhmp_replica_addr_to_id(struct sockaddr_in *sock) {
     inet_ntop(AF_INET, &(sock->sin_addr), cur_ip, sizeof(cur_ip));
     cur_ip_len = strlen(cur_ip);
 
-    for (int i = 0; i < REPLICAS_NUM; i++) {
+    for (int i = 0; i < server->other_replica_cnts; i++) {
         // FIXME is travers_ip and cur_ip the same thing?
-        memcpy(travers_ip, server->replica_net_infos[i].addr, 16);
+        memcpy(travers_ip, server->other_replica_info_ptrs[i]->replica_info.addr, 16);
         travers_ip_len = strlen(travers_ip);
         if (memcmp(cur_ip, travers_ip, max(cur_ip_len, travers_ip_len)) == 0) {
-            return i;
+            return server->other_replica_info_ptrs[i]->server_id;
+            ;
         }
     }
     return -1;
@@ -1259,55 +1230,48 @@ static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transp
     } else if (rdma_trans == server->replica_listen_transport) {
         int replica_id;
         // XXX if maybe redundant
-        normal_trans = dhmp_replica_is_exist_connection(&event->id->route.addr.dst_sin);
-        if (normal_trans) { // exsiting client conn -> new polling conn
-            DEBUG_LOG("duplicated replica transport connnection request");
+
+        new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, false, false);
+        new_trans->cls_flg |= REPLICA;
+        if (!new_trans) {
+            ERROR_LOG("rdma trans process connect request error.");
             return -1;
-        } else {
-            new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, false, false);
-            new_trans->cls_flg |= REPLICA;
-            if (!new_trans) {
-                ERROR_LOG("rdma trans process connect request error.");
-                return -1;
-            }
-            new_trans->cm_id = event->id;
-            new_trans->cm_id->context = new_trans;
-            retval = dhmp_qp_create(new_trans);
-            if (retval) {
-                ERROR_LOG("dhmp qp create error.");
-                goto out;
-            }
-
-            // XXX more efficient way for addr to replica_id?
-            replica_id = dhmp_replica_addr_to_id(&event->id->route.addr.dst_sin);
-            if (replica_id < 0) {
-                ERROR_LOG("dhmp qp create error.");
-                goto out;
-            }
-
-            // XXX redundant lock?
-            pthread_mutex_lock(&server->mutex_replica_list);
-            server->replica_transports[replica_id] = new_trans;
-            pthread_mutex_unlock(&server->mutex_replica_list);
-
-            memset(&conn_param, 0, sizeof(conn_param));
-            conn_param.retry_count = 100;
-            conn_param.rnr_retry_count = 200;
-            conn_param.responder_resources = 1;
-            conn_param.initiator_depth = 1;
-
-            retval = rdma_accept(new_trans->cm_id, &conn_param);
-            if (retval) {
-                ERROR_LOG("rdma accept error.");
-                return -1;
-            }
-
-            new_trans->trans_state = DHMP_TRANSPORT_STATE_CONNECTING;
-
-            // XXX What's the points?
-            dhmp_post_all_recv(new_trans);
-            return retval;
         }
+        new_trans->cm_id = event->id;
+        new_trans->cm_id->context = new_trans;
+        retval = dhmp_qp_create(new_trans);
+
+        if (retval) {
+            ERROR_LOG("dhmp qp create error.");
+            goto out;
+        }
+
+        // XXX more efficient way for addr to replica_id? solved
+        replica_id = dhmp_replica_addr_to_id(&event->id->route.addr.dst_sin);
+        if (replica_id < 0) {
+            ERROR_LOG("unknown incoming replica connect reqeust addr");
+            goto out;
+        }
+
+        server->replica_transports[replica_id] = new_trans;
+
+        memset(&conn_param, 0, sizeof(conn_param));
+        conn_param.retry_count = 100;
+        conn_param.rnr_retry_count = 200;
+        conn_param.responder_resources = 1;
+        conn_param.initiator_depth = 1;
+
+        retval = rdma_accept(new_trans->cm_id, &conn_param);
+        if (retval) {
+            ERROR_LOG("rdma accept error.");
+            return -1;
+        }
+
+        new_trans->trans_state = DHMP_TRANSPORT_STATE_CONNECTING;
+
+        // XXX What's the points?
+        dhmp_post_all_recv(new_trans);
+        return retval;
     }
 out:
     free(new_trans);

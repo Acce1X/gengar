@@ -44,6 +44,14 @@ struct dhmp_server {
     struct dhmp_context ctx;
     struct dhmp_config config;
 
+    // store config metadata to simplify access.
+    int server_id; // my id
+    int group_id;  // my replica group id
+    struct dhmp_server_info
+        *other_replica_info_ptrs[DHMP_SERVER_GROUP_MEMBER_MAX]; // my replica group members(not include myself)
+    int other_replica_cnts;
+    struct dhmp_server_info *my_server_info_ptr;
+
     struct dhmp_transport *listen_trans;
     struct dhmp_transport *watcher_trans;
 
@@ -66,12 +74,7 @@ struct dhmp_server {
 
     /*replicas infos*/ // TODO init
     struct dhmp_transport *replica_listen_transport;
-    struct dhmp_transport *replica_transports[REPLICAS_NUM];
-    pthread_mutex_t mutex_replica_list;
-    int replica_id;
-
-    int replica_cnt;
-    struct dhmp_net_info replica_net_infos[REPLICAS_NUM];
+    struct dhmp_transport *replica_transports[DHMP_SERVER_GROUP_MEMBER_MAX]; // server_id -> trans map
 };
 
 extern struct dhmp_server *server;

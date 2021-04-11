@@ -51,10 +51,10 @@ typedef enum dhmp_transport_class_flag {
 struct dhmp_transport {
     struct sockaddr_in peer_addr;
     struct sockaddr_in local_addr;
-    union {
-        int node_id;
-        int replica_id;
-    };
+
+    // TODO unify node_id server_id etc.
+    int node_id;
+
     enum dhmp_transport_state trans_state;
     struct dhmp_context *ctx;
     struct dhmp_device *device;
@@ -74,9 +74,6 @@ struct dhmp_transport {
     long nvm_used_size;
 
     struct list_head client_entry;
-
-    // replica control
-    pthread_mutex_t conn_lock; // avoid duplicated
 
     // XXX maybe not necessary?
     dhmp_transport_class_flag cls_flg;

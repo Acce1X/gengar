@@ -86,8 +86,11 @@ static int dhmp_parse_client_node(struct dhmp_config *config_ptr, int index, xml
 
 static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index, xmlDocPtr doc, xmlNodePtr curnode) {
     xmlChar *val;
+
     val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
     int server_id = atoi((const char *)val);
+    config_ptr->server_infos[server_id].server_id = server_id;
+
     curnode = curnode->xmlChildrenNode;
     while (curnode != NULL) {
         // net_info
@@ -153,14 +156,16 @@ static int dhmp_parse_replica_group_node(struct dhmp_config *config_ptr, int ind
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_SERVER_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
             int server_id = atoi((const char *)val);
-            config_ptr->group_infos[group_id].replica_infos[replica_id] = config_ptr->server_infos + server_id;
+            config_ptr->group_infos[group_id].member_ids[config_ptr->group_infos[group_id].member_cnt++] = server_id;
             replica_id++;
             xmlFree(val);
         }
-
-        curnode = curnode->xmlChildrenNode;
-        if (curnode == NULL)
+        if (curnode->xmlChildrenNode) {
+            curnode = curnode->xmlChildrenNode;
+            continue;
+        } else {
             curnode = curnode->next;
+        }
     }
 
     return 0;
@@ -182,8 +187,9 @@ static void dhmp_set_curnode_id(struct dhmp_config *config_ptr) {
     dev_num = conf.ifc_len / sizeof(struct ifreq);
     ifr = conf.ifc_req;
 
-    for (k = 0; k < config_ptr->nets_cnt; k++) {
-        for (i = 0; i < dev_num; i++, ifr++) {
+    bool valid = false;
+    for (k = 0; k < config_ptr->nets_cnt && !valid; k++) {
+        for (i = 0; i < dev_num && !valid; i++, ifr++) {
             sin = (struct sockaddr_in *)(&ifr->ifr_addr);
             // find the addr of local nic that corresponding to config xml
             ioctl(socketfd, SIOCGIFFLAGS, ifr);
@@ -202,11 +208,8 @@ static void dhmp_set_curnode_id(struct dhmp_config *config_ptr) {
                     if (!strcmp(config_ptr->server_infos[i].net_info.addr, addr)) {
                         config_ptr->curnet_id = i;
                     }
-                    if (!strcmp(config_ptr->server_infos[i].replica_info.addr, replica_addr)) {
-                        config_ptr->replica_id = i;
-                    }
                 }
-                break;
+                valid = true;
             }
         }
     }
@@ -265,7 +268,7 @@ int dhmp_config_init(struct dhmp_config *config_ptr, bool is_client) {
             config_ptr->nets_cnt++;
         }
 
-        if (xmlStrcmp(curnode->name, (const xmlChar *)DHMP_REPLICA_GROUP_STR)) {
+        if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_REPLICA_GROUP_STR)) {
             dhmp_parse_replica_group_node(config_ptr, index, config_doc, curnode);
         }
         curnode = curnode->next;

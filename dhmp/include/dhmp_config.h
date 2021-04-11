@@ -26,13 +26,15 @@ struct dhmp_client_info {};
 struct dhmp_watcher_info {};
 
 struct dhmp_server_info {
+    int server_id;
     struct dhmp_net_info net_info;
     struct dhmp_net_info replica_info;
 };
 
 struct dhmp_replica_group_info {
     int group_id;
-    struct dhmp_server_info *replica_infos[REPLICAS_NUM];
+    int member_cnt;
+    int member_ids[DHMP_SERVER_GROUP_MEMBER_MAX];
 };
 
 struct dhmp_config {
@@ -40,11 +42,14 @@ struct dhmp_config {
     // struct dhmp_net_info net_infos[DHMP_SERVER_NODE_NUM];
     struct dhmp_simu_info simu_infos[DHMP_SERVER_NODE_NUM];
 
+    /* server only:*/
+    // TODO unify server_id naming
     int curnet_id; // store the net_infos index of curnet
-    int replica_id;
+    int group_id;  // store the replica group index
 
-    int nets_cnt; // current include total server nodes
-    int groups_cnt;
+    int nets_cnt;   // current include total server nodes
+    int groups_cnt; // store the exsiting group number - client only
+
     char watcher_addr[DHMP_ADDR_LEN];
     int watcher_port;
 

@@ -160,7 +160,7 @@ void dhmp_watcher_init() {
 
     /*init normal connection*/
     memset(watcher->connect_trans, 0, DHMP_SERVER_NODE_NUM * sizeof(struct dhmp_transport *));
-    for (i = 0; i < watcher->config.nets_cnt; i++) {
+    for (i = 0; i < watcher->config.groups_cnt; i++) {
         INFO_LOG("create the [%d]-th normal transport.", i);
         watcher->connect_trans[i] = dhmp_transport_create(&watcher->ctx, dhmp_get_dev_from_watcher(), false, false);
         if (!watcher->connect_trans[i]) {
@@ -168,8 +168,9 @@ void dhmp_watcher_init() {
             continue;
         }
         watcher->connect_trans[i]->node_id = i;
-        dhmp_transport_connect(watcher->connect_trans[i], watcher->config.net_infos[i].addr,
-                               watcher->config.net_infos[i].port);
+        int leader_id = watcher->config.group_infos[i].member_ids[0];
+        dhmp_transport_connect(watcher->connect_trans[i], watcher->config.server_infos[leader_id].net_info.addr,
+                               watcher->config.server_infos[leader_id].net_info.port);
     }
 
     for (i = 0; i < watcher->config.nets_cnt; i++) {

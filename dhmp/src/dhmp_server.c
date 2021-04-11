@@ -1,4 +1,5 @@
 #include "dhmp_server.h"
+#include "dhmp.h"
 #include "dhmp_config.h"
 #include "dhmp_dev.h"
 #include "dhmp_hash.h"
@@ -34,28 +35,31 @@ const size_t buddy_size[MAX_ORDER] = {65536, 131072, 262144, 524288, 1048576};
 struct dhmp_server *server = NULL;
 
 static void *connection_routine(void *arg) {
-    int replica_id = *(int *)arg;
+
+    int target_id = *(int *)arg; // connection request targer server id
+
     int retry_cnt = 0;
-    server->replica_transports[replica_id] =
+
+    server->replica_transports[target_id] =
         dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), false, false);
-    server->replica_transports[replica_id]->replica_id = replica_id;
     while (1) {
-        int retval = dhmp_transport_connect(server->replica_transports[replica_id], server->replica_net_infos->addr,
-                                            server->replica_net_infos->port);
+        int retval = dhmp_transport_connect(server->replica_transports[target_id],
+                                            server->config.server_infos[target_id].replica_info.addr,
+                                            server->config.server_infos[target_id].replica_info.port);
         if (retval < 0) {
             ERROR_LOG("server connect failed");
             //? need to clean transport?
             break;
         }
         // XXX poll to waiting for state change.
-        while (server->replica_transports[replica_id]->trans_state == DHMP_TRANSPORT_STATE_CONNECTING)
+        while (server->replica_transports[target_id]->trans_state == DHMP_TRANSPORT_STATE_CONNECTING)
             ;
-        if (server->replica_transports[replica_id]->trans_state == DHMP_TRANSPORT_STATE_ERROR) {
-            INFO_LOG("connect to replica #%d failed, retry times: %d", replica_id, ++retry_cnt);
+        if (server->replica_transports[target_id]->trans_state == DHMP_TRANSPORT_STATE_ERROR) {
+            INFO_LOG("connect to replica #%d failed, retry times: %d", target_id, ++retry_cnt);
             continue;
         }
-        if (server->replica_transports[replica_id]->trans_state == DHMP_TRANSPORT_STATE_CONNECTING) {
-            INFO_LOG("connect to replica #%d succeed !", replica_id);
+        if (server->replica_transports[target_id]->trans_state == DHMP_TRANSPORT_STATE_CONNECTING) {
+            INFO_LOG("connect to replica #%d succeed !", target_id);
             break;
         }
     }
@@ -189,9 +193,24 @@ void dhmp_server_init() {
         ERROR_LOG("allocate memory error.");
         return;
     }
-
+    // init for hash
     dhmp_hash_init();
+
+    // init for config and add ref in server
     dhmp_config_init(&server->config, false);
+    server->server_id = server->config.curnet_id;
+    server->my_server_info_ptr = &server->config.server_infos[server->server_id];
+
+    server->group_id = server->config.group_id;
+    server->other_replica_cnts = server->config.group_infos[server->group_id].member_cnt - 1;
+    for (int i = 0; i < server->config.group_infos[server->group_id].member_cnt; i++) {
+        int replica_id = server->config.group_infos[server->group_id].member_ids[i];
+        if (replica_id != server->server_id) {
+            server->other_replica_info_ptrs[i] = &server->config.server_infos[replica_id];
+        }
+    }
+
+    // init for init
     dhmp_context_init(&server->ctx);
 
     server->watcher_trans = NULL;
@@ -223,8 +242,7 @@ void dhmp_server_init() {
         exit(-1);
     }
 
-    err = dhmp_transport_listen(server->listen_trans,
-                                server->config.server_infos[server->config.curnet_id].net_info.port);
+    err = dhmp_transport_listen(server->listen_trans, server->my_server_info_ptr->net_info.port);
     if (err)
         exit(-1);
 
@@ -233,30 +251,29 @@ void dhmp_server_init() {
     INIT_LIST_HEAD(&server->more_area_list);
     server->cur_area = dhmp_area_create(true, SINGLE_AREA_SIZE);
 
-    // following handle the replicas
+    /*************************following handle the replicas*****************************/
 
-    memset(server->replica_transports, 0, REPLICAS_NUM * sizeof(struct dhmp_transport *));
+    memset(server->replica_transports, 0, DHMP_SERVER_GROUP_MEMBER_MAX * sizeof(struct dhmp_transport *));
 
-    // listen the higher # replica
+    // passively listen from the higher # replica
     server->replica_listen_transport = dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), true, false);
-    server->replica_listen_transport->cls_flg |= REPLICA;
     if (!server->replica_listen_transport) {
         ERROR_LOG("create replica_listen_transport error.");
         exit(-1);
     }
 
-    struct dhmp_net_info *replica_info = &server->config.server_infos[server->config.replica_id].replica_info;
-    err = dhmp_transport_listen(server->replica_listen_transport, replica_info->port);
+    err = dhmp_transport_listen(server->replica_listen_transport, server->my_server_info_ptr->replica_info.port);
     if (err) {
         exit(-1);
     }
 
-    // connect the lower # replica
-
-    for (int i = server->replica_id; i > 0; i--) {
-        pthread_t thread;
-        pthread_create(&thread, NULL, connection_routine, &i);
-        pthread_detach(thread);
+    // actively connect to the lower # replica
+    for (int i = 0; i < server->other_replica_cnts; i++) {
+        if (server->server_id > server->other_replica_info_ptrs[i]->server_id) {
+            pthread_t thread;
+            pthread_create(&thread, NULL, connection_routine, &i);
+            pthread_detach(thread);
+        }
     }
 }
 
