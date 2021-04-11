@@ -44,6 +44,7 @@ struct dhmp_config {
     int replica_id;
 
     int nets_cnt; // current include total server nodes
+    int groups_cnt;
     char watcher_addr[DHMP_ADDR_LEN];
     int watcher_port;
 

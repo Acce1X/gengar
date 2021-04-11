@@ -1,4 +1,5 @@
 #include "dhmp_server.h"
+#include "dhmp_config.h"
 #include "dhmp_dev.h"
 #include "dhmp_hash.h"
 #include "dhmp_log.h"
@@ -31,6 +32,35 @@ const int buddy_num[MAX_ORDER] = {2, 1, 1, 1, 1};
 const size_t buddy_size[MAX_ORDER] = {65536, 131072, 262144, 524288, 1048576};
 
 struct dhmp_server *server = NULL;
+
+static void *connection_routine(void *arg) {
+    int replica_id = *(int *)arg;
+    int retry_cnt = 0;
+    server->replica_transports[replica_id] =
+        dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), false, false);
+    server->replica_transports[replica_id]->replica_id = replica_id;
+    while (1) {
+        int retval = dhmp_transport_connect(server->replica_transports[replica_id], server->replica_net_infos->addr,
+                                            server->replica_net_infos->port);
+        if (retval < 0) {
+            ERROR_LOG("server connect failed");
+            //? need to clean transport?
+            break;
+        }
+        // XXX poll to waiting for state change.
+        while (server->replica_transports[replica_id]->trans_state == DHMP_TRANSPORT_STATE_CONNECTING)
+            ;
+        if (server->replica_transports[replica_id]->trans_state == DHMP_TRANSPORT_STATE_ERROR) {
+            INFO_LOG("connect to replica #%d failed, retry times: %d", replica_id, ++retry_cnt);
+            continue;
+        }
+        if (server->replica_transports[replica_id]->trans_state == DHMP_TRANSPORT_STATE_CONNECTING) {
+            INFO_LOG("connect to replica #%d succeed !", replica_id);
+            break;
+        }
+    }
+    return NULL;
+}
 
 //=============================== public methods ===============================
 
@@ -204,7 +234,6 @@ void dhmp_server_init() {
     server->cur_area = dhmp_area_create(true, SINGLE_AREA_SIZE);
 
     // following handle the replicas
-    // TODO replce MACRO with config
 
     memset(server->replica_transports, 0, REPLICAS_NUM * sizeof(struct dhmp_transport *));
 
@@ -215,28 +244,20 @@ void dhmp_server_init() {
         ERROR_LOG("create replica_listen_transport error.");
         exit(-1);
     }
-    // err = dhmp_transport_listen(server->replica_listen_transport,
-    //                             server->config.replica_infos[]->server->config.curnet_id]->);
+
+    struct dhmp_net_info *replica_info = &server->config.server_infos[server->config.replica_id].replica_info;
+    err = dhmp_transport_listen(server->replica_listen_transport, replica_info->port);
     if (err) {
         exit(-1);
     }
 
     // connect the lower # replica
-    for (int i = server->replica_id; i > 0; i--) {
-        server->replica_transports[i] = dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), false, false);
-        server->replica_transports[i]->replica_id = i;
-        dhmp_transport_connect(server->replica_transports[i], server->replica_net_infos->addr,
-                               server->replica_net_infos->port);
-    }
 
-    // TODO sychronized for all(?) replicas connection to be established
-    // polling to wait for connection establishment compeleted
-    // for (int i = server->replica_id + 1; i < REPLICAS_NUM; i++) {
-    //     if (server->replica_transports[i] == NULL)
-    //         continue;
-    //     while (server->replica_transports[i]->trans_state < DHMP_TRANSPORT_STATE_CONNECTED) {
-    //     };
-    // }
+    for (int i = server->replica_id; i > 0; i--) {
+        pthread_t thread;
+        pthread_create(&thread, NULL, connection_routine, &i);
+        pthread_detach(thread);
+    }
 }
 
 void dhmp_server_destroy() {

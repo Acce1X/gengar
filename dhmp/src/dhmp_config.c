@@ -141,6 +141,9 @@ static int dhmp_parse_replica_group_node(struct dhmp_config *config_ptr, int ind
     while (curnode != NULL) {
         // level : group
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_GROUP_STR)) {
+            if (!xmlIsBlankNode(curnode)) {
+                config_ptr->groups_cnt++;
+            }
             val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
             group_id = atoi((const char *)val);
             replica_id = 0;
