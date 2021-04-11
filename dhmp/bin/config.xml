@@ -7,13 +7,28 @@
         <addr>127.0.0.1</addr>
         <port>3333</port>
     </watcher>
+    <replica_groups>
+        <group id = "1">
+            <server>1</server>
+            <server>2</server>
+        </group>
+    </replica_groups>
     <server id="1">
         <nic_name>ens33</nic_name>
         <addr>172.16.112.7</addr>
         <port>39300</port>
         <rdelay>200</rdelay>
         <wdelay>800</wdelay>
-        <replica_id>1</replica_id>
+        <replica_nic>ens33</replica_nic>
+        <replica_addr>172.16.112.7</replica_addr>
+        <replica_port>39301</replica_port>
+    </server>
+    <server id="2">
+        <nic_name>ens33</nic_name>
+        <addr>172.16.112.7</addr>
+        <port>39300</port>
+        <rdelay>200</rdelay>
+        <wdelay>800</wdelay>
         <replica_nic>ens33</replica_nic>
         <replica_addr>172.16.112.7</replica_addr>
         <replica_port>39301</replica_port>

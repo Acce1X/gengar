@@ -94,5 +94,4 @@ extern struct dhmp_client *client;
 extern int rdelay, wdelay, knum;
 ;
 
-
 #endif

@@ -20,21 +20,37 @@ struct dhmp_simu_info {
     int knum;
 };
 
-struct dhmp_replica_info {
-    int replica_id;
-    char nic_name[DHMA_NIC_NAME_LEN];
-    char addr[DHMP_ADDR_LEN];
-    int port;
+// TODO complete definition
+struct dhmp_client_info {};
+
+struct dhmp_watcher_info {};
+
+struct dhmp_server_info {
+    struct dhmp_net_info net_info;
+    struct dhmp_net_info replica_info;
+};
+
+struct dhmp_replica_group_info {
+    int group_id;
+    struct dhmp_server_info *replica_infos[REPLICAS_NUM];
 };
 
 struct dhmp_config {
-    struct dhmp_net_info net_infos[DHMP_SERVER_NODE_NUM];
+
+    // struct dhmp_net_info net_infos[DHMP_SERVER_NODE_NUM];
     struct dhmp_simu_info simu_infos[DHMP_SERVER_NODE_NUM];
+
     int curnet_id; // store the net_infos index of curnet
-    int nets_cnt;  // current include total server nodes
+    int replica_id;
+
+    int nets_cnt; // current include total server nodes
     char watcher_addr[DHMP_ADDR_LEN];
     int watcher_port;
-    struct dhmp_replica_info replica_infos[REPLICAS_NUM];
+
+    // new design
+    // FIXME DHMP_SERVER_NODE_NUM is actually DHMP_SERVER_GROUP_NUM
+    struct dhmp_server_info server_infos[DHMP_SERVER_NODE_NUM];
+    struct dhmp_replica_group_info group_infos[DHMP_SERVER_GROUP_NUM];
 };
 
 /**

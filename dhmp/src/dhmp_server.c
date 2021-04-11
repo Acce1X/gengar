@@ -193,7 +193,8 @@ void dhmp_server_init() {
         exit(-1);
     }
 
-    err = dhmp_transport_listen(server->listen_trans, server->config.net_infos[server->config.curnet_id].port);
+    err = dhmp_transport_listen(server->listen_trans,
+                                server->config.server_infos[server->config.curnet_id].net_info.port);
     if (err)
         exit(-1);
 
@@ -214,13 +215,14 @@ void dhmp_server_init() {
         ERROR_LOG("create replica_listen_transport error.");
         exit(-1);
     }
-    err = dhmp_transport_listen(server->replica_listen_transport, server->replica_net_infos->port);
+    // err = dhmp_transport_listen(server->replica_listen_transport,
+    //                             server->config.replica_infos[]->server->config.curnet_id]->);
     if (err) {
         exit(-1);
     }
 
     // connect the lower # replica
-    for (int i = server->replica_id; i > 1; i--) {
+    for (int i = server->replica_id; i > 0; i--) {
         server->replica_transports[i] = dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), false, false);
         server->replica_transports[i]->replica_id = i;
         dhmp_transport_connect(server->replica_transports[i], server->replica_net_infos->addr,
