@@ -40,7 +40,7 @@ struct dhmp_mr {
     struct ibv_mr *mr;
 };
 
-typedef enum dhmp_transport_class_flag {
+typedef enum dhmp_transport_type {
     REPLICA = 1 << 1,
     CLIENT = 1 << 2,
     POLL = 1 << 3,

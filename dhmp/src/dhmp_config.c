@@ -29,16 +29,26 @@
 
 static void dhmp_print_config(struct dhmp_config *total_config_ptr) {
     int i;
+    INFO_LOG("server cnt = %d", total_config_ptr->nets_cnt);
     for (i = 0; i < total_config_ptr->nets_cnt; i++) {
+
         INFO_LOG("-------------------------------------------------");
         INFO_LOG("server id %d", total_config_ptr->server_infos[i].server_id);
         INFO_LOG("nic name %s", total_config_ptr->server_infos[i].net_info.nic_name);
         INFO_LOG("addr %s", total_config_ptr->server_infos[i].net_info.addr);
         INFO_LOG("port %d", total_config_ptr->server_infos[i].net_info.port);
-
         INFO_LOG("replica_nic %s", total_config_ptr->server_infos[i].replica_info.nic_name);
         INFO_LOG("replica_addr %s", total_config_ptr->server_infos[i].replica_info.addr);
         INFO_LOG("replica_port %d", total_config_ptr->server_infos[i].replica_info.port);
+    }
+    INFO_LOG("-------------------------------------------------");
+    INFO_LOG("group cnt = %d", total_config_ptr->groups_cnt);
+    for (i = 0; i < total_config_ptr->groups_cnt; i++) {
+        INFO_LOG("group id %d", total_config_ptr->group_infos[i].group_id);
+        INFO_LOG("  group member cnt %d", total_config_ptr->group_infos[i].member_cnt);
+        for (int j = 0; j < total_config_ptr->group_infos[i].member_cnt; j++) {
+            INFO_LOG("  group member id %d", total_config_ptr->group_infos[i].member_ids[j]);
+        }
         INFO_LOG("-------------------------------------------------");
     }
 }
@@ -87,8 +97,9 @@ static int dhmp_parse_client_node(struct dhmp_config *config_ptr, int index, xml
 }
 
 static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index, xmlDocPtr doc, xmlNodePtr curnode) {
-    xmlChar *val;
+    config_ptr->nets_cnt++;
 
+    xmlChar *val;
     val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
     int server_id = atoi((const char *)val);
     config_ptr->server_infos[server_id].server_id = server_id;
@@ -139,35 +150,25 @@ static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index, xml
     return 0;
 }
 
-static int dhmp_parse_replica_group_node(struct dhmp_config *config_ptr, int index, xmlDocPtr doc, xmlNodePtr curnode) {
+static int dhmp_parse_group_node(struct dhmp_config *config_ptr, int index, xmlDocPtr doc, xmlNodePtr curnode) {
+    config_ptr->groups_cnt++;
+
     xmlChar *val;
-    int group_id = -1;
-    int replica_id = -1;
+    val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
+    int group_id = atoi((const char *)val);
+    xmlFree(val);
+
+    curnode = curnode->xmlChildrenNode;
     while (curnode != NULL) {
-        // level : group
-        if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_GROUP_STR)) {
-            if (!xmlIsBlankNode(curnode)) {
-                config_ptr->groups_cnt++;
-            }
-            val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
-            group_id = atoi((const char *)val);
-            replica_id = 0;
-            xmlFree(val);
-        }
         // level : group / server
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_SERVER_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
             int server_id = atoi((const char *)val);
-            config_ptr->group_infos[group_id].member_ids[config_ptr->group_infos[group_id].member_cnt++] = server_id;
-            replica_id++;
+            config_ptr->group_infos[group_id].member_ids[config_ptr->group_infos[group_id].member_cnt] = server_id;
+            config_ptr->group_infos[group_id].member_cnt++;
             xmlFree(val);
         }
-        if (curnode->xmlChildrenNode) {
-            curnode = curnode->xmlChildrenNode;
-            continue;
-        } else {
-            curnode = curnode->next;
-        }
+        curnode = curnode->next;
     }
 
     return 0;
@@ -267,11 +268,10 @@ int dhmp_config_init(struct dhmp_config *config_ptr, bool is_client) {
 
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_SERVER_STR)) {
             dhmp_parse_server_node(config_ptr, index, config_doc, curnode);
-            config_ptr->nets_cnt++;
         }
 
-        if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_REPLICA_GROUP_STR)) {
-            dhmp_parse_replica_group_node(config_ptr, index, config_doc, curnode);
+        if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_GROUP_STR)) {
+            dhmp_parse_group_node(config_ptr, index, config_doc, curnode);
         }
         curnode = curnode->next;
     }

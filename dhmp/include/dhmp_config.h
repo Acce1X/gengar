@@ -14,11 +14,6 @@ struct dhmp_net_info {
 };
 
 /*nvm simulate infomation*/
-struct dhmp_simu_info {
-    int rdelay;
-    int wdelay;
-    int knum;
-};
 
 // TODO complete definition
 struct dhmp_client_info {};

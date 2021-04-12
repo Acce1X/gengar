@@ -35,14 +35,15 @@ const size_t buddy_size[MAX_ORDER] = {65536, 131072, 262144, 524288, 1048576};
 struct dhmp_server *server = NULL;
 
 static void *connection_routine(void *arg) {
-
+    DEBUG_LOG("connection_routine start");
     int target_id = *(int *)arg; // connection request targer server id
-
+    free((int *)arg);
     int retry_cnt = 0;
 
     server->replica_transports[target_id] =
         dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), false, false);
     while (1) {
+        INFO_LOG("trying to connect retry count :%d", retry_cnt);
         int retval = dhmp_transport_connect(server->replica_transports[target_id],
                                             server->config.server_infos[target_id].replica_info.addr,
                                             server->config.server_infos[target_id].replica_info.port);
@@ -58,11 +59,12 @@ static void *connection_routine(void *arg) {
             INFO_LOG("connect to replica #%d failed, retry times: %d", target_id, ++retry_cnt);
             continue;
         }
-        if (server->replica_transports[target_id]->trans_state == DHMP_TRANSPORT_STATE_CONNECTING) {
+        if (server->replica_transports[target_id]->trans_state == DHMP_TRANSPORT_STATE_CONNECTED) {
             INFO_LOG("connect to replica #%d succeed !", target_id);
             break;
         }
     }
+    DEBUG_LOG("connection_routine finished");
     return NULL;
 }
 
@@ -266,12 +268,15 @@ void dhmp_server_init() {
     if (err) {
         exit(-1);
     }
+    DEBUG_LOG("start to listening replica");
 
     // actively connect to the lower # replica
     for (int i = 0; i < server->other_replica_cnts; i++) {
         if (server->server_id > server->other_replica_info_ptrs[i]->server_id) {
             pthread_t thread;
-            pthread_create(&thread, NULL, connection_routine, &i);
+            int *p = malloc(sizeof(int));
+            *p = i;
+            pthread_create(&thread, NULL, connection_routine, p);
             pthread_detach(thread);
         }
     }

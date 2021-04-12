@@ -1065,6 +1065,7 @@ static int on_cm_addr_resolved(struct rdma_cm_event *event, struct dhmp_transpor
     retval = rdma_resolve_route(rdma_trans->cm_id, ROUTE_RESOLVE_TIMEOUT);
     if (retval) {
         ERROR_LOG("RDMA resolve route error.");
+        rdma_trans->trans_state = DHMP_TRANSPORT_STATE_ERROR;
         return retval;
     }
 
@@ -1309,7 +1310,7 @@ static void dhmp_destroy_source(struct dhmp_transport *rdma_trans) {
         ibv_dereg_mr(rdma_trans->recv_mr.mr);
         free(rdma_trans->recv_mr.addr);
     }
-
+    // TODO nullptr error
     rdma_destroy_qp(rdma_trans->cm_id);
     dhmp_context_del_event_fd(rdma_trans->ctx, rdma_trans->dcq->comp_channel->fd);
     dhmp_context_del_event_fd(rdma_trans->ctx, rdma_trans->event_channel->fd);
@@ -1336,10 +1337,15 @@ static int on_cm_disconnected(struct rdma_cm_event *event, struct dhmp_transport
 }
 
 static int on_cm_error(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans) {
-    dhmp_destroy_source(rdma_trans);
+    if (event->event == RDMA_CM_EVENT_CONNECT_ERROR) {
+        dhmp_destroy_source(rdma_trans);
+    }
+
     rdma_trans->trans_state = DHMP_TRANSPORT_STATE_ERROR;
     if (server != NULL) {
-        if (rdma_trans != server->watcher_trans) {
+        // if (rdma_trans != server->watcher_trans)
+        // TODO have to complete the type classfication mechanism
+        if (rdma_trans->cls_flg & NORMAL) {
             --server->cur_connections;
             pthread_mutex_lock(&server->mutex_client_list);
             list_del(&rdma_trans->client_entry);
@@ -1384,11 +1390,14 @@ static int dhmp_handle_ec_event(struct rdma_cm_event *event) {
     case RDMA_CM_EVENT_DISCONNECTED:
         retval = on_cm_disconnected(event, rdma_trans);
         break;
+
     case RDMA_CM_EVENT_CONNECT_ERROR:
+    case RDMA_CM_EVENT_ADDR_ERROR:
+    case RDMA_CM_EVENT_ROUTE_ERROR:
         retval = on_cm_error(event, rdma_trans);
         break;
     default:
-        // ERROR_LOG("occur the other error.");
+        INFO_LOG("occur the other error.");
         retval = -1;
         break;
     };
@@ -1683,6 +1692,7 @@ int dhmp_transport_connect(struct dhmp_transport *rdma_trans, const char *url, i
         rdma_resolve_addr(rdma_trans->cm_id, NULL, (struct sockaddr *)&rdma_trans->peer_addr, ADDR_RESOLVE_TIMEOUT);
     if (retval) {
         ERROR_LOG("RDMA Device resolve addr error.");
+        rdma_trans->trans_state = DHMP_TRANSPORT_STATE_ERROR;
         goto clean_cmid;
     }
 
