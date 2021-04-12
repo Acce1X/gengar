@@ -8,6 +8,7 @@
 #include "dhmp_watcher.h"
 #include <pthread.h>
 #include <rdma/rdma_cma.h>
+#include <unistd.h>
 
 // 4KB:4096,8192,16384,32768,65536,131072,262144
 // 8KB:8192,16384,32768,65536,131072,262144,524288
@@ -57,6 +58,7 @@ static void *connection_routine(void *arg) {
             ;
         if (server->replica_transports[target_id]->trans_state == DHMP_TRANSPORT_STATE_ERROR) {
             INFO_LOG("connect to replica #%d failed, retry times: %d", target_id, ++retry_cnt);
+            sleep(1 * retry_cnt);
             continue;
         }
         if (server->replica_transports[target_id]->trans_state == DHMP_TRANSPORT_STATE_CONNECTED) {
@@ -205,10 +207,10 @@ void dhmp_server_init() {
 
     server->group_id = server->config.group_id;
     server->other_replica_cnts = server->config.group_infos[server->group_id].member_cnt - 1;
-    for (int i = 0; i < server->config.group_infos[server->group_id].member_cnt; i++) {
+    for (int i = 0, j = 0; i < server->config.group_infos[server->group_id].member_cnt; i++) {
         int replica_id = server->config.group_infos[server->group_id].member_ids[i];
         if (replica_id != server->server_id) {
-            server->other_replica_info_ptrs[i] = &server->config.server_infos[replica_id];
+            server->other_replica_info_ptrs[j++] = &server->config.server_infos[replica_id];
         }
     }
 

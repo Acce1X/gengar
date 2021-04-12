@@ -1344,8 +1344,8 @@ static int on_cm_error(struct rdma_cm_event *event, struct dhmp_transport *rdma_
     rdma_trans->trans_state = DHMP_TRANSPORT_STATE_ERROR;
     if (server != NULL) {
         // if (rdma_trans != server->watcher_trans)
-        // TODO have to complete the type classfication mechanism
-        if (rdma_trans->cls_flg & NORMAL) {
+        // FIXME have to complete the type classfication mechanism
+        if (!list_empty(&server->client_list)) {
             --server->cur_connections;
             pthread_mutex_lock(&server->mutex_client_list);
             list_del(&rdma_trans->client_entry);

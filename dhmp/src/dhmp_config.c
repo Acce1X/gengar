@@ -103,6 +103,7 @@ static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index, xml
     val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
     int server_id = atoi((const char *)val);
     config_ptr->server_infos[server_id].server_id = server_id;
+    xmlFree(val);
 
     curnode = curnode->xmlChildrenNode;
     while (curnode != NULL) {
@@ -156,6 +157,7 @@ static int dhmp_parse_group_node(struct dhmp_config *config_ptr, int index, xmlD
     xmlChar *val;
     val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
     int group_id = atoi((const char *)val);
+    config_ptr->group_infos[group_id].group_id = group_id;
     xmlFree(val);
 
     curnode = curnode->xmlChildrenNode;
