@@ -16,8 +16,7 @@
  *	dhmp_addr_info_insert_ht:
  *	add new addr info into the addr_info_hashtable in client
  */
-static void dhmp_addr_info_insert_ht(void *dhmp_addr,
-                                     struct dhmp_addr_info *addr_info) {
+static void dhmp_addr_info_insert_ht(void *dhmp_addr, struct dhmp_addr_info *addr_info) {
     int index;
 
     addr_info->dram_mr.addr = NULL;
@@ -63,10 +62,8 @@ static void dhmp_malloc_work_handler(struct dhmp_work *work) {
     if (res_addr == NULL)
         free(malloc_work->addr_info);
     else {
-        res_addr = dhmp_transfer_dhmp_addr(malloc_work->rdma_trans,
-                                           malloc_work->addr_info->nvm_mr.addr);
-        malloc_work->addr_info->node_index =
-            dhmp_get_node_index_from_addr(res_addr);
+        res_addr = dhmp_transfer_dhmp_addr(malloc_work->rdma_trans, malloc_work->addr_info->nvm_mr.addr);
+        malloc_work->addr_info->node_index = dhmp_get_node_index_from_addr(res_addr);
         malloc_work->addr_info->write_flag = false;
         dhmp_addr_info_insert_ht(res_addr, malloc_work->addr_info);
     }
@@ -116,8 +113,7 @@ static void dhmp_free_work_handler(struct dhmp_work *work) {
     msg.data_size = sizeof(struct dhmp_free_request);
     msg.data = &req_msg;
 
-    DEBUG_LOG("free addr is %p length is %d", addr_info->nvm_mr.addr,
-              addr_info->nvm_mr.length);
+    DEBUG_LOG("free addr is %p length is %d", addr_info->nvm_mr.addr, addr_info->nvm_mr.length);
 
     dhmp_post_send(free_work->rdma_trans, &msg);
 
@@ -152,8 +148,7 @@ static void dhmp_read_work_handler(struct dhmp_work *work) {
     ++addr_info->read_cnt;
 #ifdef DHMP_CACHE_POLICY
     if (addr_info->dram_mr.addr != NULL) {
-        dhmp_rdma_read(rwork->rdma_trans, &addr_info->dram_mr,
-                       rwork->local_addr, rwork->length);
+        dhmp_rdma_read(rwork->rdma_trans, &addr_info->dram_mr, rwork->local_addr, rwork->length);
     } else {
 #endif
         sleeptime = (rwork->length / PAGE_SIZE + 1) * rdelay / knum;
@@ -163,8 +158,7 @@ static void dhmp_read_work_handler(struct dhmp_work *work) {
         if (nanosleep(&ts1, &ts2) < 0)
             ERROR_LOG("sleep error.");
 
-        dhmp_rdma_read(rwork->rdma_trans, &addr_info->nvm_mr, rwork->local_addr,
-                       rwork->length);
+        dhmp_rdma_read(rwork->rdma_trans, &addr_info->nvm_mr, rwork->local_addr, rwork->length);
 #ifdef DHMP_CACHE_POLICY
     }
 #endif
@@ -197,8 +191,7 @@ static void dhmp_write_work_handler(struct dhmp_work *work) {
     ++addr_info->write_cnt;
 #ifdef DHMP_CACHE_POLICY
     if (addr_info->dram_mr.addr != NULL)
-        dhmp_rdma_write(wwork->rdma_trans, addr_info, &addr_info->dram_mr,
-                        wwork->local_addr, wwork->length);
+        dhmp_rdma_write(wwork->rdma_trans, addr_info, &addr_info->dram_mr, wwork->local_addr, wwork->length);
     else {
 #endif
         sleeptime = (wwork->length / PAGE_SIZE + 1) * wdelay / knum;
@@ -208,8 +201,7 @@ static void dhmp_write_work_handler(struct dhmp_work *work) {
         if (nanosleep(&ts1, &ts2) < 0)
             ERROR_LOG("sleep error.");
 
-        dhmp_rdma_write(wwork->rdma_trans, addr_info, &addr_info->nvm_mr,
-                        wwork->local_addr, wwork->length);
+        dhmp_rdma_write(wwork->rdma_trans, addr_info, &addr_info->nvm_mr, wwork->local_addr, wwork->length);
 #ifdef DHMP_CACHE_POLICY
     }
 #endif
@@ -244,8 +236,7 @@ void *dhmp_work_handle_thread(void *data) {
 
         pthread_mutex_lock(&client->mutex_work_list);
         if (!list_empty(&client->work_list)) {
-            work = list_first_entry(&client->work_list, struct dhmp_work,
-                                    work_entry);
+            work = list_first_entry(&client->work_list, struct dhmp_work, work_entry);
             list_del(&work->work_entry);
         }
         pthread_mutex_unlock(&client->mutex_work_list);
@@ -280,13 +271,12 @@ void *dhmp_work_handle_thread(void *data) {
     return NULL;
 }
 
-void *dhmp_transfer_dhmp_addr(struct dhmp_transport *rdma_trans,
-                              void *normal_addr) {
+void *dhmp_transfer_dhmp_addr(struct dhmp_transport *rdma_trans, void *normal_addr) {
     long long node_index, ll_addr;
     int index;
     void *dhmp_addr;
 
-    for (index = 0; index < DHMP_SERVER_NODE_NUM; index++) {
+    for (index = 0; index < DHMP_MAX_SERVER_GROUP_NUM; index++) {
         if (rdma_trans == client->connect_trans[index])
             break;
     }
@@ -313,8 +303,7 @@ int dhmp_hash_in_client(void *addr) {
 
     key = hash(&addr, sizeof(void *));
     /*key is a uint32_t value,through below fomula transfer*/
-    index = ((key % DHMP_CLIENT_HT_SIZE) + DHMP_CLIENT_HT_SIZE) %
-            DHMP_CLIENT_HT_SIZE;
+    index = ((key % DHMP_CLIENT_HT_SIZE) + DHMP_CLIENT_HT_SIZE) % DHMP_CLIENT_HT_SIZE;
 
     return index;
 }
@@ -331,8 +320,7 @@ struct dhmp_addr_info *dhmp_get_addr_info_from_ht(int index, void *dhmp_addr) {
         goto out;
     else {
         normal_addr = dhmp_transfer_normal_addr(dhmp_addr);
-        hlist_for_each_entry(addr_info, &client->addr_info_ht[index],
-                             addr_entry) {
+        hlist_for_each_entry(addr_info, &client->addr_info_ht[index], addr_entry) {
             if (addr_info->nvm_mr.addr == normal_addr)
                 break;
         }

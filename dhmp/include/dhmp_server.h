@@ -48,7 +48,7 @@ struct dhmp_server {
     int server_id; // my id
     int group_id;  // my replica group id
     struct dhmp_server_info
-        *other_replica_info_ptrs[DHMP_SERVER_GROUP_MEMBER_MAX]; // my replica group members(not include myself)
+        *other_replica_info_ptrs[DHMP_MAX_SERVER_GROUP_MEMBER_NUM - 1]; // my replica group members(not include myself)
     int other_replica_cnts;
     struct dhmp_server_info *my_server_info_ptr;
 
@@ -74,7 +74,7 @@ struct dhmp_server {
 
     /*replicas infos*/ // TODO init
     struct dhmp_transport *replica_listen_transport;
-    struct dhmp_transport *replica_transports[DHMP_SERVER_GROUP_MEMBER_MAX]; // server_id -> trans map
+    struct dhmp_transport *replica_transports[DHMP_MAX_SERVER_GROUP_MEMBER_NUM - 1]; // server_id -> trans map
 };
 
 extern struct dhmp_server *server;

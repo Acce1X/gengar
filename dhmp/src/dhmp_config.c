@@ -30,7 +30,8 @@
 static void dhmp_print_config(struct dhmp_config *total_config_ptr) {
     int i;
     for (i = 0; i < total_config_ptr->nets_cnt; i++) {
-
+        INFO_LOG("-------------------------------------------------");
+        INFO_LOG("server id %d", total_config_ptr->server_infos[i].server_id);
         INFO_LOG("nic name %s", total_config_ptr->server_infos[i].net_info.nic_name);
         INFO_LOG("addr %s", total_config_ptr->server_infos[i].net_info.addr);
         INFO_LOG("port %d", total_config_ptr->server_infos[i].net_info.port);
@@ -38,6 +39,7 @@ static void dhmp_print_config(struct dhmp_config *total_config_ptr) {
         INFO_LOG("replica_nic %s", total_config_ptr->server_infos[i].replica_info.nic_name);
         INFO_LOG("replica_addr %s", total_config_ptr->server_infos[i].replica_info.addr);
         INFO_LOG("replica_port %d", total_config_ptr->server_infos[i].replica_info.port);
+        INFO_LOG("-------------------------------------------------");
     }
 }
 

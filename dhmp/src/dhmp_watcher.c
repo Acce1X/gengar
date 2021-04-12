@@ -11,8 +11,8 @@ static json_object *dhmp_get_json_data() {
     int i, j;
     char server_name[25], app_name[25];
 
-    json_object *dram_total_size_arr[DHMP_SERVER_NODE_NUM], *nvm_total_size_arr[DHMP_SERVER_NODE_NUM], *server_jobj,
-        *app_jobj, *res, *dram_used_size, *nvm_used_size, *apps_arr;
+    json_object *dram_total_size_arr[DHMP_MAX_SERVER_GROUP_NUM], *nvm_total_size_arr[DHMP_MAX_SERVER_GROUP_NUM],
+        *server_jobj, *app_jobj, *res, *dram_used_size, *nvm_used_size, *apps_arr;
 
     for (i = 0; i < watcher->config.nets_cnt; i++) {
         dram_total_size_arr[i] = json_object_new_int64(watcher->servers_info[i].dram_total_size);
@@ -159,7 +159,7 @@ void dhmp_watcher_init() {
     dhmp_dev_list_init(&watcher->dev_list);
 
     /*init normal connection*/
-    memset(watcher->connect_trans, 0, DHMP_SERVER_NODE_NUM * sizeof(struct dhmp_transport *));
+    memset(watcher->connect_trans, 0, DHMP_MAX_SERVER_GROUP_NUM * sizeof(struct dhmp_transport *));
     for (i = 0; i < watcher->config.groups_cnt; i++) {
         INFO_LOG("create the [%d]-th normal transport.", i);
         watcher->connect_trans[i] = dhmp_transport_create(&watcher->ctx, dhmp_get_dev_from_watcher(), false, false);

@@ -125,7 +125,7 @@ static void dhmp_mem_change_handle(struct dhmp_transport *rdma_trans, struct dhm
     app_mem_head = (struct dhmp_app_mem_info *)msg->data;
     len = msg->data_size / sizeof(struct dhmp_app_mem_info);
 
-    while (node_index < DHMP_SERVER_NODE_NUM) {
+    while (node_index < DHMP_MAX_SERVER_GROUP_NUM) {
         if (rdma_trans == watcher->connect_trans[node_index])
             break;
         node_index++;
@@ -625,7 +625,7 @@ static struct dhmp_transport *dhmp_get_connect_trans(struct dhmp_transport *poll
     struct dhmp_transport *connect_trans;
     int index;
 
-    for (index = 0; index < DHMP_SERVER_NODE_NUM; index++) {
+    for (index = 0; index < DHMP_MAX_SERVER_GROUP_NUM; index++) {
         if (client->poll_trans[index] == poll_trans)
             break;
     }
@@ -693,7 +693,7 @@ static void dhmp_apply_dram_response_handler(struct dhmp_transport *rdma_trans, 
     int i, length, index, node_index;
     void *dhmp_addr;
 
-    for (node_index = 0; node_index < DHMP_SERVER_NODE_NUM; node_index++) {
+    for (node_index = 0; node_index < DHMP_MAX_SERVER_GROUP_NUM; node_index++) {
         if (rdma_trans == client->connect_trans[node_index])
             break;
     }
@@ -804,7 +804,7 @@ static void dhmp_server_info_response_handler(struct dhmp_transport *rdma_trans,
 
     server_mem_info = (struct dhmp_server_mem_info *)msg->data;
 
-    for (node_index = 0; node_index < DHMP_SERVER_NODE_NUM; node_index++) {
+    for (node_index = 0; node_index < DHMP_MAX_SERVER_GROUP_NUM; node_index++) {
         if (watcher->connect_trans[node_index] == rdma_trans)
             break;
     }

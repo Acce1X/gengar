@@ -19,10 +19,10 @@ struct dhmp_watcher {
 
     struct list_head dev_list;
 
-    struct dhmp_transport *connect_trans[DHMP_SERVER_NODE_NUM];
+    struct dhmp_transport *connect_trans[DHMP_MAX_SERVER_GROUP_NUM];
 
-    struct dhmp_server_mem_info servers_info[DHMP_SERVER_NODE_NUM];
-    struct dhmp_app_mem_info apps_info[DHMP_SERVER_NODE_NUM][DHMP_MAX_CLIENT_NUM];
+    struct dhmp_server_mem_info servers_info[DHMP_MAX_SERVER_GROUP_NUM];
+    struct dhmp_app_mem_info apps_info[DHMP_MAX_SERVER_GROUP_NUM][DHMP_MAX_CLIENT_NUM];
     int cur_app_num;
 
     int tcp_sockfd;

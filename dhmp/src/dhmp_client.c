@@ -10,8 +10,8 @@ int rdelay, wdelay, knum;
 
 static struct dhmp_transport *dhmp_node_select() {
     int i;
-    for (i = 0; i < DHMP_SERVER_NODE_NUM; i++) {
-        if (client->fifo_node_index >= DHMP_SERVER_NODE_NUM)
+    for (i = 0; i < DHMP_MAX_SERVER_GROUP_NUM; i++) {
+        if (client->fifo_node_index >= DHMP_MAX_SERVER_GROUP_NUM)
             client->fifo_node_index = 0;
 
         if (client->connect_trans[client->fifo_node_index] != NULL &&
@@ -73,9 +73,9 @@ void dhmp_client_init() {
     dhmp_hash_init();
     dhmp_config_init(&client->config, true);
     dhmp_context_init(&client->ctx);
-    rdelay = client->config.simu_infos[0].rdelay;
-    wdelay = client->config.simu_infos[0].wdelay;
-    knum = client->config.simu_infos[0].knum;
+    // rdelay = client->config.simu_infos[0].rdelay;
+    // wdelay = client->config.simu_infos[0].wdelay;
+    // knum = client->config.simu_infos[0].knum;
 
     /*init list about rdma device*/
     INIT_LIST_HEAD(&client->dev_list);
@@ -94,7 +94,7 @@ void dhmp_client_init() {
     INIT_LIST_HEAD(&client->send_mr_list);
 
     /*init normal connection*/
-    memset(client->connect_trans, 0, DHMP_SERVER_NODE_NUM * sizeof(struct dhmp_transport *));
+    memset(client->connect_trans, 0, DHMP_MAX_SERVER_GROUP_NUM * sizeof(struct dhmp_transport *));
     for (i = 0; i < client->config.nets_cnt; i++) {
         INFO_LOG("create the [%d]-th normal transport.", i);
         client->connect_trans[i] = dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), false, false);
@@ -115,7 +115,7 @@ void dhmp_client_init() {
     }
 
     /*init the poll connection*/
-    memset(client->poll_trans, 0, DHMP_SERVER_NODE_NUM * sizeof(struct dhmp_transport *));
+    memset(client->poll_trans, 0, DHMP_MAX_SERVER_GROUP_NUM * sizeof(struct dhmp_transport *));
     for (i = 0; i < client->config.groups_cnt; i++) {
         INFO_LOG("create the [%d]-th poll transport.", i);
         client->poll_trans[i] = dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), false, true);
@@ -139,7 +139,7 @@ void dhmp_client_init() {
     }
 
     /*threshhold init*/
-    for (i = 0; i < DHMP_SERVER_NODE_NUM; i++) {
+    for (i = 0; i < DHMP_MAX_SERVER_GROUP_NUM; i++) {
         client->access_dram_num[i] = 0;
         client->threshold[i] = 2;
         client->per_benefit[i] = 0.0;

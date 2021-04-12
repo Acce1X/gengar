@@ -18,8 +18,8 @@ struct dhmp_client {
 
     struct list_head dev_list;
 
-    struct dhmp_transport *connect_trans[DHMP_SERVER_NODE_NUM];
-    struct dhmp_transport *poll_trans[DHMP_SERVER_NODE_NUM];
+    struct dhmp_transport *connect_trans[DHMP_MAX_SERVER_GROUP_NUM];
+    struct dhmp_transport *poll_trans[DHMP_MAX_SERVER_GROUP_NUM];
 
     /*store the dhmp_addr_entry hashtable*/
     // pthread_mutex_t mutex_ht;
@@ -48,15 +48,15 @@ struct dhmp_client {
     int poll_num;
 
     /*threshhold*/
-    int access_dram_num[DHMP_SERVER_NODE_NUM];
-    double per_benefit[DHMP_SERVER_NODE_NUM];
-    double per_benefit_max[DHMP_SERVER_NODE_NUM];
-    int threshold[DHMP_SERVER_NODE_NUM];
-    bool dram_threshold_policy[DHMP_SERVER_NODE_NUM];
-    size_t req_dram_size[DHMP_SERVER_NODE_NUM];
-    size_t res_dram_size[DHMP_SERVER_NODE_NUM];
-    double pre_hit_ratio[DHMP_SERVER_NODE_NUM];
-    double pre_hit_ratio_max[DHMP_SERVER_NODE_NUM];
+    int access_dram_num[DHMP_MAX_SERVER_GROUP_NUM];
+    double per_benefit[DHMP_MAX_SERVER_GROUP_NUM];
+    double per_benefit_max[DHMP_MAX_SERVER_GROUP_NUM];
+    int threshold[DHMP_MAX_SERVER_GROUP_NUM];
+    bool dram_threshold_policy[DHMP_MAX_SERVER_GROUP_NUM];
+    size_t req_dram_size[DHMP_MAX_SERVER_GROUP_NUM];
+    size_t res_dram_size[DHMP_MAX_SERVER_GROUP_NUM];
+    double pre_hit_ratio[DHMP_MAX_SERVER_GROUP_NUM];
+    double pre_hit_ratio_max[DHMP_MAX_SERVER_GROUP_NUM];
 };
 
 /**

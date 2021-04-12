@@ -34,13 +34,10 @@ struct dhmp_server_info {
 struct dhmp_replica_group_info {
     int group_id;
     int member_cnt;
-    int member_ids[DHMP_SERVER_GROUP_MEMBER_MAX];
+    int member_ids[DHMP_MAX_SERVER_GROUP_MEMBER_NUM];
 };
 
 struct dhmp_config {
-
-    // struct dhmp_net_info net_infos[DHMP_SERVER_NODE_NUM];
-    struct dhmp_simu_info simu_infos[DHMP_SERVER_NODE_NUM];
 
     /* server only:*/
     // TODO unify server_id naming
@@ -54,9 +51,9 @@ struct dhmp_config {
     int watcher_port;
 
     // new design
-    // FIXME DHMP_SERVER_NODE_NUM is actually DHMP_SERVER_GROUP_NUM
-    struct dhmp_server_info server_infos[DHMP_SERVER_NODE_NUM];
-    struct dhmp_replica_group_info group_infos[DHMP_SERVER_GROUP_NUM];
+
+    struct dhmp_server_info server_infos[DHMP_MAX_SERVER_GROUP_NUM * DHMP_MAX_SERVER_GROUP_MEMBER_NUM];
+    struct dhmp_replica_group_info group_infos[DHMP_MAX_SERVER_GROUP_MEMBER_NUM];
 };
 
 /**

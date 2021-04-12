@@ -253,7 +253,7 @@ void dhmp_server_init() {
 
     /*************************following handle the replicas*****************************/
 
-    memset(server->replica_transports, 0, DHMP_SERVER_GROUP_MEMBER_MAX * sizeof(struct dhmp_transport *));
+    memset(server->replica_transports, 0, (DHMP_MAX_SERVER_GROUP_NUM - 1) * sizeof(struct dhmp_transport *));
 
     // passively listen from the higher # replica
     server->replica_listen_transport = dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), true, false);
