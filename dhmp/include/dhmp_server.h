@@ -3,6 +3,8 @@
 #include "dhmp.h"
 #include "dhmp_config.h"
 #include "dhmp_context.h"
+#include "linux/list.h"
+#include <pthread.h>
 
 /*decide the buddy system's order*/
 #define MAX_ORDER 5
@@ -74,7 +76,12 @@ struct dhmp_server {
 
     /*replicas infos*/ // TODO init
     struct dhmp_transport *replica_listen_transport;
-    struct dhmp_transport *replica_transports[DHMP_MAX_SERVER_GROUP_MEMBER_NUM - 1]; // server_id -> trans map
+    struct dhmp_transport *replica_transports_table[DHMP_MAX_SERVER_GROUP_MEMBER_NUM - 1]; // server_id -> trans map
+
+    // TODO init
+    struct list_head log; // type : struct dhmp_msg
+    pthread_t log_thread;
+    pthread_mutex_t log_lock;
 };
 
 extern struct dhmp_server *server;
@@ -86,6 +93,8 @@ bool dhmp_buddy_system_build(struct dhmp_area *area);
 int dhmp_hash_in_server(void *nvm_addr);
 
 struct dhmp_device *dhmp_get_dev_from_server();
+
+void dhmp_server_append_log(struct dhmp_msg *msg);
 
 /**
  *	dhmp_server_init:init server

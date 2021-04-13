@@ -33,21 +33,21 @@ static void dhmp_print_config(struct dhmp_config *total_config_ptr) {
     for (i = 0; i < total_config_ptr->nets_cnt; i++) {
 
         INFO_LOG("-------------------------------------------------");
-        INFO_LOG("server id %d", total_config_ptr->server_infos[i].server_id);
-        INFO_LOG("nic name %s", total_config_ptr->server_infos[i].net_info.nic_name);
-        INFO_LOG("addr %s", total_config_ptr->server_infos[i].net_info.addr);
-        INFO_LOG("port %d", total_config_ptr->server_infos[i].net_info.port);
-        INFO_LOG("replica_nic %s", total_config_ptr->server_infos[i].replica_info.nic_name);
-        INFO_LOG("replica_addr %s", total_config_ptr->server_infos[i].replica_info.addr);
-        INFO_LOG("replica_port %d", total_config_ptr->server_infos[i].replica_info.port);
+        INFO_LOG("server id %d", total_config_ptr->server_infos_table[i].server_id);
+        INFO_LOG("nic name %s", total_config_ptr->server_infos_table[i].net_info.nic_name);
+        INFO_LOG("addr %s", total_config_ptr->server_infos_table[i].net_info.addr);
+        INFO_LOG("port %d", total_config_ptr->server_infos_table[i].net_info.port);
+        INFO_LOG("replica_nic %s", total_config_ptr->server_infos_table[i].replica_info.nic_name);
+        INFO_LOG("replica_addr %s", total_config_ptr->server_infos_table[i].replica_info.addr);
+        INFO_LOG("replica_port %d", total_config_ptr->server_infos_table[i].replica_info.port);
     }
     INFO_LOG("-------------------------------------------------");
     INFO_LOG("group cnt = %d", total_config_ptr->groups_cnt);
     for (i = 0; i < total_config_ptr->groups_cnt; i++) {
-        INFO_LOG("group id %d", total_config_ptr->group_infos[i].group_id);
-        INFO_LOG("  group member cnt %d", total_config_ptr->group_infos[i].member_cnt);
-        for (int j = 0; j < total_config_ptr->group_infos[i].member_cnt; j++) {
-            INFO_LOG("  group member id %d", total_config_ptr->group_infos[i].member_ids[j]);
+        INFO_LOG("group id %d", total_config_ptr->group_infos_table[i].group_id);
+        INFO_LOG("  group member cnt %d", total_config_ptr->group_infos_table[i].member_cnt);
+        for (int j = 0; j < total_config_ptr->group_infos_table[i].member_cnt; j++) {
+            INFO_LOG("  group member id %d", total_config_ptr->group_infos_table[i].member_ids[j]);
         }
         INFO_LOG("-------------------------------------------------");
     }
@@ -102,7 +102,7 @@ static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index, xml
     xmlChar *val;
     val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
     int server_id = atoi((const char *)val);
-    config_ptr->server_infos[server_id].server_id = server_id;
+    config_ptr->server_infos_table[server_id].server_id = server_id;
     xmlFree(val);
 
     curnode = curnode->xmlChildrenNode;
@@ -110,39 +110,40 @@ static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index, xml
         // net_info
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_NIC_NAME_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
-            memcpy(config_ptr->server_infos[server_id].net_info.nic_name, (const void *)val,
+            memcpy(config_ptr->server_infos_table[server_id].net_info.nic_name, (const void *)val,
                    strlen((const char *)val) + 1);
             xmlFree(val);
         }
 
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_ADDR_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
-            memcpy(config_ptr->server_infos[server_id].net_info.addr, (const void *)val, strlen((const char *)val) + 1);
+            memcpy(config_ptr->server_infos_table[server_id].net_info.addr, (const void *)val,
+                   strlen((const char *)val) + 1);
             xmlFree(val);
         }
 
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_PORT_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
-            config_ptr->server_infos[server_id].net_info.port = atoi((const char *)val);
+            config_ptr->server_infos_table[server_id].net_info.port = atoi((const char *)val);
             xmlFree(val);
         }
 
         // replica_info
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_REPLICA_NIC_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
-            memcpy(config_ptr->server_infos[server_id].replica_info.nic_name, (const void *)val,
+            memcpy(config_ptr->server_infos_table[server_id].replica_info.nic_name, (const void *)val,
                    strlen((const char *)val) + 1);
             xmlFree(val);
         }
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_REPLICA_ADDR_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
-            memcpy(config_ptr->server_infos[server_id].replica_info.addr, (const void *)val,
+            memcpy(config_ptr->server_infos_table[server_id].replica_info.addr, (const void *)val,
                    strlen((const char *)val) + 1);
             xmlFree(val);
         }
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_REPLICA_PORT_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
-            config_ptr->server_infos[server_id].replica_info.port = atoi((const char *)val);
+            config_ptr->server_infos_table[server_id].replica_info.port = atoi((const char *)val);
             xmlFree(val);
         }
 
@@ -157,7 +158,7 @@ static int dhmp_parse_group_node(struct dhmp_config *config_ptr, int index, xmlD
     xmlChar *val;
     val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
     int group_id = atoi((const char *)val);
-    config_ptr->group_infos[group_id].group_id = group_id;
+    config_ptr->group_infos_table[group_id].group_id = group_id;
     xmlFree(val);
 
     curnode = curnode->xmlChildrenNode;
@@ -166,8 +167,9 @@ static int dhmp_parse_group_node(struct dhmp_config *config_ptr, int index, xmlD
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_SERVER_STR)) {
             val = xmlNodeListGetString(doc, curnode->xmlChildrenNode, 1);
             int server_id = atoi((const char *)val);
-            config_ptr->group_infos[group_id].member_ids[config_ptr->group_infos[group_id].member_cnt] = server_id;
-            config_ptr->group_infos[group_id].member_cnt++;
+            config_ptr->group_infos_table[group_id].member_ids[config_ptr->group_infos_table[group_id].member_cnt] =
+                server_id;
+            config_ptr->group_infos_table[group_id].member_cnt++;
             xmlFree(val);
         }
         curnode = curnode->next;
@@ -199,18 +201,18 @@ static void dhmp_set_curnode_id(struct dhmp_config *config_ptr) {
             // find the addr of local nic that corresponding to config xml
             ioctl(socketfd, SIOCGIFFLAGS, ifr);
             if (((ifr->ifr_flags & IFF_LOOPBACK) == 0) && (ifr->ifr_flags & IFF_UP)) {
-                if (addr == NULL && !strcmp(ifr->ifr_name, config_ptr->server_infos[k].net_info.nic_name)) {
+                if (addr == NULL && !strcmp(ifr->ifr_name, config_ptr->server_infos_table[k].net_info.nic_name)) {
                     INFO_LOG("%s %s", ifr->ifr_name, inet_ntoa(sin->sin_addr));
                     addr = inet_ntoa(sin->sin_addr);
                 }
-                if (!strcmp(ifr->ifr_name, config_ptr->server_infos[k].replica_info.nic_name)) {
+                if (!strcmp(ifr->ifr_name, config_ptr->server_infos_table[k].replica_info.nic_name)) {
                     INFO_LOG("%s %s", ifr->ifr_name, inet_ntoa(sin->sin_addr));
                     replica_addr = inet_ntoa(sin->sin_addr);
                 }
             }
             if (addr != NULL && replica_addr != NULL) {
                 for (i = 0; i < config_ptr->nets_cnt; i++) {
-                    if (!strcmp(config_ptr->server_infos[i].net_info.addr, addr)) {
+                    if (!strcmp(config_ptr->server_infos_table[i].net_info.addr, addr)) {
                         config_ptr->curnet_id = i;
                     }
                 }
@@ -221,11 +223,11 @@ static void dhmp_set_curnode_id(struct dhmp_config *config_ptr) {
 
     if (k >= config_ptr->nets_cnt) {
         if (addr == NULL) {
-            ERROR_LOG("can't find ip corresponding to NIC:%s", config_ptr->server_infos[k].net_info.nic_name);
+            ERROR_LOG("can't find ip corresponding to NIC:%s", config_ptr->server_infos_table[k].net_info.nic_name);
         }
         if (replica_addr == NULL) {
             ERROR_LOG("can't find ip corresponding to NIC for replica:%s",
-                      config_ptr->server_infos[k].replica_info.nic_name);
+                      config_ptr->server_infos_table[k].replica_info.nic_name);
         }
         exit(-1);
     }

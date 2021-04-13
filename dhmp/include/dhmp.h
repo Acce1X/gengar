@@ -82,6 +82,7 @@ struct dhmp_msg {
     enum dhmp_msg_type msg_type;
     size_t data_size;
     void *data;
+    struct list_head entry;
 };
 
 /*struct dhmp_addr_info is the addr struct in cluster*/

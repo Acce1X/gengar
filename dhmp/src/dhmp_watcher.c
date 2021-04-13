@@ -168,9 +168,9 @@ void dhmp_watcher_init() {
             continue;
         }
         watcher->connect_trans[i]->node_id = i;
-        int leader_id = watcher->config.group_infos[i].member_ids[0];
-        dhmp_transport_connect(watcher->connect_trans[i], watcher->config.server_infos[leader_id].net_info.addr,
-                               watcher->config.server_infos[leader_id].net_info.port);
+        int leader_id = watcher->config.group_infos_table[i].member_ids[0];
+        dhmp_transport_connect(watcher->connect_trans[i], watcher->config.server_infos_table[leader_id].net_info.addr,
+                               watcher->config.server_infos_table[leader_id].net_info.port);
     }
 
     for (i = 0; i < watcher->config.nets_cnt; i++) {

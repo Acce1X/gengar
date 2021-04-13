@@ -292,11 +292,17 @@ static bool dhmp_malloc_more_area(struct dhmp_msg *msg, struct dhmp_mc_response 
 }
 
 static void dhmp_malloc_request_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg) {
+    // sync with other replicas
+    dhmp_server_append_log(msg);
+    dhmp_leader_forward_msg();
+
+    // reply to client
     struct dhmp_mc_response response;
     struct dhmp_msg res_msg;
     bool res = true;
 
     memcpy(&response.req_info, msg->data, sizeof(struct dhmp_mc_request));
+
     INFO_LOG("client req size %d", response.req_info.req_size);
 
     if (response.req_info.req_size <= buddy_size[MAX_ORDER - 1]) {
@@ -877,11 +883,8 @@ static void dhmp_wc_success_handler(struct ibv_wc *wc) {
     msg.data = task_ptr->sge.addr + sizeof(enum dhmp_msg_type) + sizeof(size_t);
 
     switch (wc->opcode) {
+    // active end handler
     case IBV_WC_SEND:
-        break;
-    case IBV_WC_RECV:
-        dhmp_wc_recv_handler(rdma_trans, &msg);
-        dhmp_post_recv(rdma_trans, task_ptr->sge.addr);
         break;
     case IBV_WC_RDMA_WRITE:
 #ifdef DHMP_MR_REUSE_POLICY
@@ -897,6 +900,16 @@ static void dhmp_wc_success_handler(struct ibv_wc *wc) {
     case IBV_WC_RDMA_READ:
         task_ptr->done_flag = true;
         break;
+
+    // passive end handler
+    case IBV_WC_RECV:
+        dhmp_wc_recv_handler(rdma_trans, &msg);
+        dhmp_post_recv(rdma_trans, task_ptr->sge.addr);
+        break;
+    case IBV_WC_RECV_RDMA_WITH_IMM:
+
+        break;
+
     default:
         ERROR_LOG("unknown opcode:%s", dhmp_wc_opcode_str(wc->opcode));
         break;
@@ -1254,7 +1267,7 @@ static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transp
             goto out;
         }
 
-        server->replica_transports[replica_id] = new_trans;
+        server->replica_transports_table[replica_id] = new_trans;
 
         memset(&conn_param, 0, sizeof(conn_param));
         conn_param.retry_count = 100;
@@ -1708,7 +1721,15 @@ clean_rdmatrans:
 
     return retval;
 }
-
+/**
+ * @brief Blocking
+ *
+ * @param rdma_trans
+ * @param mr
+ * @param local_addr
+ * @param length
+ * @return int
+ */
 int dhmp_rdma_read(struct dhmp_transport *rdma_trans, struct ibv_mr *mr, void *local_addr, int length) {
     struct dhmp_task *read_task;
     struct ibv_send_wr send_wr, *bad_wr = NULL;
@@ -1833,7 +1854,12 @@ int dhmp_rdma_write(struct dhmp_transport *rdma_trans, struct dhmp_addr_info *ad
 error:
     return -1;
 }
-
+/**
+ * @brief dhmp send interface. Nonblocking, Asynchronous. the msg will be wrapped in a task.
+ * ibv_post_send() is utilmately called
+ * @param rdma_trans
+ * @param msg_ptr
+ */
 void dhmp_post_send(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg_ptr) {
     struct ibv_send_wr send_wr, *bad_wr = NULL;
     struct ibv_sge sge;

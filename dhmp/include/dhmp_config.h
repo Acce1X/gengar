@@ -47,8 +47,8 @@ struct dhmp_config {
 
     // new design
 
-    struct dhmp_server_info server_infos[DHMP_MAX_SERVER_GROUP_NUM * DHMP_MAX_SERVER_GROUP_MEMBER_NUM];
-    struct dhmp_replica_group_info group_infos[DHMP_MAX_SERVER_GROUP_MEMBER_NUM];
+    struct dhmp_server_info server_infos_table[DHMP_MAX_SERVER_NUM];                    // bucket:  id -> s_info
+    struct dhmp_replica_group_info group_infos_table[DHMP_MAX_SERVER_GROUP_MEMBER_NUM]; // bucket:  id -> g_info
 };
 
 /**

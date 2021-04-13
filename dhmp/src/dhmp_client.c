@@ -126,9 +126,9 @@ void dhmp_client_init() {
         }
         client->poll_trans[i]->node_id = i;
 
-        int server_id = client->config.group_infos[i].member_ids[0];
-        dhmp_transport_connect(client->poll_trans[i], client->config.server_infos[server_id].net_info.addr,
-                               client->config.server_infos[server_id].net_info.port);
+        int server_id = client->config.group_infos_table[i].member_ids[0];
+        dhmp_transport_connect(client->poll_trans[i], client->config.server_infos_table[server_id].net_info.addr,
+                               client->config.server_infos_table[server_id].net_info.port);
     }
 
     for (i = 0; i < client->config.groups_cnt; i++) {
