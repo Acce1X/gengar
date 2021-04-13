@@ -979,8 +979,8 @@ static struct dhmp_cq *dhmp_cq_get(struct dhmp_device *device, struct dhmp_conte
         ERROR_LOG("context add comp channel fd error.");
         goto cleanchannel;
     }
-
-    dcq->cq = ibv_create_cq(device->verbs, 100000, dcq, dcq->comp_channel, 0);
+    // HACK 10000 ->1000
+    dcq->cq = ibv_create_cq(device->verbs, 1000, dcq, dcq->comp_channel, 0);
     if (!dcq->cq) {
         ERROR_LOG("ibv create cq error.");
         goto cleaneventfd;
@@ -1320,7 +1320,8 @@ static int on_cm_disconnected(struct rdma_cm_event *event, struct dhmp_transport
     dhmp_destroy_source(rdma_trans);
     rdma_trans->trans_state = DHMP_TRANSPORT_STATE_DISCONNECTED;
     if (server != NULL) {
-        if (rdma_trans != server->watcher_trans) {
+        // FIXME tmporary approach
+        if (!list_empty(&server->client_list)) {
             --server->cur_connections;
             pthread_mutex_lock(&server->mutex_client_list);
             list_del(&rdma_trans->client_entry);

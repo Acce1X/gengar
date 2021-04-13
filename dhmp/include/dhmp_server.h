@@ -92,7 +92,7 @@ struct dhmp_device *dhmp_get_dev_from_server();
  *	include config.xml read, rdma listen,
  *	register memory, context run.
  */
-void dhmp_server_init();
+void dhmp_server_init(int server_id);
 
 /**
  *	dhmp_server_destroy: close the context,

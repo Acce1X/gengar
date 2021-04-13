@@ -12,23 +12,19 @@
         <server>1</server>
     </group>
     <server id="0">
-        <nic_name>ens33</nic_name>
-        <addr>172.16.112.8</addr>
+        <nic_name>ens37</nic_name>
+        <addr>10.10.10.1</addr>
         <port>39300</port>
-        <rdelay>200</rdelay>
-        <wdelay>800</wdelay>
-        <replica_nic>ens33</replica_nic>
-        <replica_addr>172.16.112.8</replica_addr>
+        <replica_nic>ens37</replica_nic>
+        <replica_addr>10.10.10.1</replica_addr>
         <replica_port>39301</replica_port>
     </server>
     <server id="1">
-        <nic_name>ens33</nic_name>
-        <addr>172.16.112.7</addr>
-        <port>39300</port>
-        <rdelay>200</rdelay>
-        <wdelay>800</wdelay>
-        <replica_nic>ens33</replica_nic>
-        <replica_addr>172.16.112.7</replica_addr>
-        <replica_port>39301</replica_port>
+        <nic_name>ens37</nic_name>
+        <addr>10.10.10.1</addr>
+        <port>40300</port>
+        <replica_nic>ens37</replica_nic>
+        <replica_addr>10.10.10.1</replica_addr>
+        <replica_port>40301</replica_port>
     </server>
 </dhmp_config>

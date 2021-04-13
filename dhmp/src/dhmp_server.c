@@ -189,7 +189,7 @@ out_addr:
     return NULL;
 }
 
-void dhmp_server_init() {
+void dhmp_server_init(int id) {
     int i, err = 0;
 
     server = (struct dhmp_server *)malloc(sizeof(struct dhmp_server));
@@ -202,7 +202,8 @@ void dhmp_server_init() {
 
     // init for config and add ref in server
     dhmp_config_init(&server->config, false);
-    server->server_id = server->config.curnet_id;
+    // server->server_id = server->config.curnet_id;
+    server->server_id = id;
     server->my_server_info_ptr = &server->config.server_infos[server->server_id];
 
     server->group_id = server->config.group_id;
