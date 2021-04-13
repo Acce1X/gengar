@@ -86,6 +86,8 @@ struct dhmp_server {
 
 extern struct dhmp_server *server;
 
+void dhmp_leader_forward_msg(struct dhmp_msg *msg) ;
+
 struct dhmp_area *dhmp_area_create(bool is_init_buddy, size_t length);
 
 bool dhmp_buddy_system_build(struct dhmp_area *area);

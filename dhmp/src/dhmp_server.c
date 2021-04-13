@@ -106,6 +106,8 @@ void dhmp_leader_forward_msg(struct dhmp_msg *msg) {
         int replica_id = server->other_replica_info_ptrs[i]->server_id;
         dhmp_post_send(server->replica_transports_table[replica_id], msg_copy);
     }
+
+    // TODO how to wait for response
 }
 
 //=============================== public methods ===============================

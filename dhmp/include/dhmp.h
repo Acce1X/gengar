@@ -62,6 +62,7 @@
 #endif
 
 enum dhmp_msg_type {
+
     DHMP_MSG_MALLOC_REQUEST,
     DHMP_MSG_MALLOC_RESPONSE,
     DHMP_MSG_MALLOC_ERROR,
@@ -82,6 +83,8 @@ struct dhmp_msg {
     enum dhmp_msg_type msg_type;
     size_t data_size;
     void *data;
+
+    bool forward_flag;
     struct list_head entry;
 };
 
