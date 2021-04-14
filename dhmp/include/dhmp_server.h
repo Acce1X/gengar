@@ -14,6 +14,23 @@
 
 extern const size_t buddy_size[MAX_ORDER];
 
+enum dhmp_log_entry_op_type { DHMP_MALLOC, DHMP_FREE, DHMP_WRITE };
+
+struct dhmp_log_entry {
+    struct list_head entry;
+    uuid_t uuid;
+    enum dhmp_log_entry_op_type op_type;
+    // how to deal the addr
+    union {
+        struct dhmp_mc_request mc_req;
+        struct dhmp_free_request free_req;
+    };
+};
+
+struct dhmp_log {
+    struct list_head log_head; /*type: dhmp_log_entry */
+};
+
 struct dhmp_free_block {
     void *addr;
     size_t size;
@@ -86,7 +103,7 @@ struct dhmp_server {
 
 extern struct dhmp_server *server;
 
-void dhmp_leader_forward_msg(struct dhmp_msg *msg) ;
+void dhmp_leader_forward_msg(struct dhmp_msg *msg);
 
 struct dhmp_area *dhmp_area_create(bool is_init_buddy, size_t length);
 

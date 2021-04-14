@@ -61,6 +61,9 @@
 #define false 0
 #endif
 
+// XXX need a uuid libaray
+typedef int uuid_t;
+
 enum dhmp_msg_type {
 
     DHMP_MSG_MALLOC_REQUEST,
@@ -83,8 +86,6 @@ struct dhmp_msg {
     enum dhmp_msg_type msg_type;
     size_t data_size;
     void *data;
-
-    bool forward_flag;
     struct list_head entry;
 };
 
@@ -101,6 +102,7 @@ struct dhmp_addr_info {
 
 /*dhmp malloc request msg*/
 struct dhmp_mc_request {
+    uuid_t uuid;
     size_t req_size;
     struct dhmp_addr_info *addr_info;
 };

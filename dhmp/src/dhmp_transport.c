@@ -301,6 +301,7 @@ static void dhmp_malloc_request_handler(struct dhmp_transport *rdma_trans, struc
     if (rdma_trans->peer_type == DHMP_TRANSPORT_TYPE_CLIENT_NORMAL) {
         dhmp_server_append_log(msg);
         dhmp_leader_forward_msg(msg);
+
         return;
     }
     if (rdma_trans->peer_type == DHMP_TRANSPORT_TYPE_REPLICA_NORMAL) {
@@ -367,6 +368,55 @@ static void dhmp_malloc_response_handler(struct dhmp_transport *rdma_trans, stru
         addr_info->read_cnt = addr_info->write_cnt = 0;
         DEBUG_LOG("response mr addr %p lkey %ld", addr_info->nvm_mr.addr, addr_info->nvm_mr.lkey);
     } else if (rdma_trans->peer_type == DHMP_TRANSPORT_TYPE_REPLICA_NORMAL) { // leader receive repsonse from folloer
+        struct dhmp_mc_response replica_response;
+        memcpy(&replica_response, msg->data, sizeof(struct dhmp_mc_response));
+        struct dhmp_mc_request client_reqeust;
+
+        struct dhmp_msg replica_res_msg;
+        struct dhmp_mc_response client_response;
+        struct dhmp_msg res_msg;
+        bool res = true;
+
+        memcpy(&response.req_info, msg->data, sizeof(struct dhmp_mc_request));
+
+        // INFO_LOG("recclient req size %d", response.req_info.req_size);
+
+        if (response.req_info.req_size <= buddy_size[MAX_ORDER - 1]) {
+            // DEBUG_LOG ( "alloc buddy block" );
+            res = dhmp_malloc_one_block(msg, &response);
+        } else if (response.req_info.req_size <= SINGLE_AREA_SIZE) {
+            // DEBUG_LOG ( "alloc one area" );
+            res = dhmp_malloc_more_area(msg, &response, SINGLE_AREA_SIZE);
+        } else {
+            // DEBUG_LOG ( "alloc more area" );
+            res = dhmp_malloc_more_area(msg, &response, response.req_info.req_size);
+        }
+
+        if (!res)
+            goto req_error;
+
+        res_msg.msg_type = DHMP_MSG_MALLOC_RESPONSE;
+        res_msg.data_size = sizeof(struct dhmp_mc_response);
+        res_msg.data = &response;
+        dhmp_post_send(rdma_trans, &res_msg);
+        /*count the server memory,and inform the watcher*/
+        // TODO should be only handled by leader
+        rdma_trans->nvm_used_size += response.mr.length;
+        dhmp_inform_watcher_func(server->watcher_trans);
+        return;
+
+    req_error:
+        /*transmit a message of DHMP_MSG_MALLOC_ERROR*/
+        res_msg.msg_type = DHMP_MSG_MALLOC_ERROR;
+        res_msg.data_size = sizeof(struct dhmp_mc_response);
+        res_msg.data = &response;
+
+        dhmp_post_send(rdma_trans, &res_msg);
+
+        return;
+
+        struct dhmp_mc_response response_msg;
+        memcpy(&response_msg, msg->data, sizeof(struct dhmp_mc_response));
 
         // TODO notify leader that the dhmp_malloc_request_handler that fowarding is done
     } else {
