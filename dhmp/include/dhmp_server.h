@@ -13,11 +13,29 @@
 #define DHMP_DRAM_HT_SIZE 251
 
 extern const size_t buddy_size[MAX_ORDER];
+/*XXX to some extent, it is kind of a ugly subtitution of thread stack in multithread model,
+since the event handler loop is single-thread. If you want to keep the singe thread model and not
+add extra blocking mechanism to achieve the purpose of synchronization, you have to do so. It is supposed
+to be replaced in future.
+    anyway, it do works. :)
+*/
+struct client_req_meta_info {
+    uuid_t req_id;
+    union {
+        struct dhmp_mc_response mc_res;
+        struct dhmp_free_response free_res;
+        // TODO more response
+    };
+    struct dhmp_transport *trans_ptr;
+    int res_cnt; // used for leader for counting the follower responses. when
+    struct hlist_node h_entry;
+};
 
 enum dhmp_log_entry_op_type { DHMP_MALLOC, DHMP_FREE, DHMP_WRITE };
 
 struct dhmp_log_entry {
-    struct list_head entry;
+    struct list_head log_entry;
+    struct hlist_node ht_entry;
     uuid_t uuid;
     enum dhmp_log_entry_op_type op_type;
     // how to deal the addr
@@ -99,11 +117,13 @@ struct dhmp_server {
     struct list_head log; // type : struct dhmp_msg
     pthread_t log_thread;
     pthread_mutex_t log_lock;
+    struct hlist_head client_request_table[251]; /* type :struct client_req_meta_info
+                                                    record the incoming request uuid & transport*/
 };
 
 extern struct dhmp_server *server;
 
-void dhmp_leader_forward_msg(struct dhmp_msg *msg);
+
 
 struct dhmp_area *dhmp_area_create(bool is_init_buddy, size_t length);
 
@@ -114,6 +134,9 @@ int dhmp_hash_in_server(void *nvm_addr);
 struct dhmp_device *dhmp_get_dev_from_server();
 
 void dhmp_server_append_log(struct dhmp_msg *msg);
+
+void dhmp_leader_forward_msg(struct dhmp_msg *msg);
+
 
 /**
  *	dhmp_server_init:init server

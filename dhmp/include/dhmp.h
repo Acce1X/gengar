@@ -61,7 +61,7 @@
 #define false 0
 #endif
 
-// XXX need a uuid libaray
+// XXX need a uuid library
 typedef int uuid_t;
 
 enum dhmp_msg_type {
@@ -115,6 +115,7 @@ struct dhmp_mc_response {
 
 /*dhmp free memory request msg*/
 struct dhmp_free_request {
+    uuid_t uuid;
     struct dhmp_addr_info *addr_info;
     struct ibv_mr mr;
 };

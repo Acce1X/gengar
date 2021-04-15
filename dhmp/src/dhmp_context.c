@@ -1,5 +1,14 @@
 #include "dhmp_context.h"
 #include "dhmp_log.h"
+#include <sys/epoll.h>
+
+// TODO can enchanced to multithread.
+static void *dhmp_context_handle_routine(void *arg) {}
+
+int dhmp_context_dispatch_handle_thread(void *event) {
+    pthread_t handler_thread;
+    pthread_create(&handler_thread, NULL, dhmp_context_handle_routine, event);
+}
 
 static void *dhmp_context_run(void *data) {
     struct epoll_event events[DHMP_EPOLL_SIZE];
@@ -11,15 +20,12 @@ static void *dhmp_context_run(void *data) {
     DEBUG_LOG("dhmp_context_run.");
     while (1) {
         events_nr = epoll_wait(ctx->epoll_fd, events, ARRAY_SIZE(events), -1);
-
         if (events_nr > 0) {
             for (i = 0; i < events_nr; i++) {
                 event_data_ptr = (struct dhmp_event_data *)events[i].data.ptr;
-                event_data_ptr->event_handler(event_data_ptr->fd,
-                                              event_data_ptr->data_ptr);
+                event_data_ptr->event_handler(event_data_ptr->fd, event_data_ptr->data_ptr);
             }
         }
-
         if (ctx->stop)
             break;
     }
@@ -47,14 +53,13 @@ int dhmp_context_init(struct dhmp_context *ctx) {
     return retval;
 }
 
-int dhmp_context_add_event_fd(struct dhmp_context *ctx, int events, int fd,
-                              void *data, dhmp_event_handler event_handler) {
+int dhmp_context_add_event_fd(struct dhmp_context *ctx, int events, int fd, void *data,
+                              dhmp_event_handler event_handler) {
     struct epoll_event ee;
     struct dhmp_event_data *event_data_ptr;
     int retval = 0;
 
-    event_data_ptr =
-        (struct dhmp_event_data *)malloc(sizeof(struct dhmp_event_data));
+    event_data_ptr = (struct dhmp_event_data *)malloc(sizeof(struct dhmp_event_data));
     if (!event_data_ptr) {
         ERROR_LOG("allocate memory error.");
         return -1;

@@ -2,6 +2,7 @@
 #define DHMP_CONTEXT_H
 
 #include "dhmp.h"
+#include <pthread.h>
 #define DHMP_EPOLL_SIZE 1024
 
 #ifndef ARRAY_SIZE
@@ -24,8 +25,8 @@ struct dhmp_context {
 
 int dhmp_context_init(struct dhmp_context *ctx);
 
-int dhmp_context_add_event_fd(struct dhmp_context *ctx, int events, int fd,
-                              void *data_ptr, dhmp_event_handler event_handler);
+int dhmp_context_add_event_fd(struct dhmp_context *ctx, int events, int fd, void *data_ptr,
+                              dhmp_event_handler event_handler);
 
 int dhmp_context_del_event_fd(struct dhmp_context *ctx, int fd);
 
