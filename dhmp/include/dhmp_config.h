@@ -36,19 +36,21 @@ struct dhmp_config {
 
     /* server only:*/
     // TODO unify server_id naming
-    int curnet_id; // store the net_infos index of curnet
-    int group_id;  // store the replica group index
+    int local_server_id; // store the net_infos index of server
+    int local_group_id;  // store the replica group index
 
-    int nets_cnt;   // current include total server nodes
+    int server_ids[DHMP_MAX_SERVER_NUM];
+    int servers_cnt;                                                 // current include total server nodes
+    struct dhmp_server_info server_infos_table[DHMP_MAX_SERVER_NUM]; // bucket:  id -> s_info
+
+    int group_ids[DHMP_MAX_SERVER_GROUP_MEMBER_NUM];
     int groups_cnt; // store the exsiting group number - client only
+    struct dhmp_replica_group_info group_infos_table[DHMP_MAX_SERVER_GROUP_MEMBER_NUM]; // bucket:  id -> g_info
 
     char watcher_addr[DHMP_ADDR_LEN];
     int watcher_port;
 
     // new design
-
-    struct dhmp_server_info server_infos_table[DHMP_MAX_SERVER_NUM];                    // bucket:  id -> s_info
-    struct dhmp_replica_group_info group_infos_table[DHMP_MAX_SERVER_GROUP_MEMBER_NUM]; // bucket:  id -> g_info
 };
 
 /**

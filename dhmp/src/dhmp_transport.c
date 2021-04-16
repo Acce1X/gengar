@@ -55,12 +55,18 @@ static void dhmp_free_response_handler(struct dhmp_transport *rdma_trans, struct
 static struct dhmp_dram_entry *dhmp_create_new_dram_entry(void *nvm_addr, size_t length);
 static bool dhmp_destroy_dram_entry(void *nvm_addr);
 static struct dhmp_transport *dhmp_get_connect_trans(struct dhmp_transport *poll_trans);
-static void dhmp_apply_dram_request_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg);
-static void dhmp_apply_dram_response_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg);
-static void dhmp_clear_dram_request_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg);
-static void dhmp_clear_dram_response_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg);
-static void dhmp_server_info_request_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg);
-static void dhmp_server_info_response_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg);
+static void dhmp_apply_dram_request_handler(struct dhmp_transport *rdma_trans,
+                                            struct dhmp_msg *msg);
+static void dhmp_apply_dram_response_handler(struct dhmp_transport *rdma_trans,
+                                             struct dhmp_msg *msg);
+static void dhmp_clear_dram_request_handler(struct dhmp_transport *rdma_trans,
+                                            struct dhmp_msg *msg);
+static void dhmp_clear_dram_response_handler(struct dhmp_transport *rdma_trans,
+                                             struct dhmp_msg *msg);
+static void dhmp_server_info_request_handler(struct dhmp_transport *rdma_trans,
+                                             struct dhmp_msg *msg);
+static void dhmp_server_info_response_handler(struct dhmp_transport *rdma_trans,
+                                              struct dhmp_msg *msg);
 
 static void dhmp_wc_success_handler(struct ibv_wc *wc);
 static void dhmp_wc_error_handler(struct ibv_wc *wc);
@@ -91,7 +97,8 @@ static int dhmp_memory_register(struct ibv_pd *pd, struct dhmp_mr *dmr, size_t l
 
 static int dhmp_port_uri_transfer(struct dhmp_transport *rdma_trans, const char *url, int port);
 static void dhmp_post_all_recv(struct dhmp_transport *rdma_trans);
-static struct dhmp_send_mr *dhmp_get_mr_from_send_list(struct dhmp_transport *rdma_trans, void *addr, int length);
+static struct dhmp_send_mr *dhmp_get_mr_from_send_list(struct dhmp_transport *rdma_trans,
+                                                       void *addr, int length);
 
 /**
  *	about watcher handle function
@@ -108,9 +115,12 @@ static void dhmp_inform_watcher_func(struct dhmp_transport *watcher_trans) {
 
     pthread_mutex_lock(&server->mutex_client_list);
     list_for_each_entry(rdma_trans, &server->client_list, client_entry) {
-        if ((rdma_trans->link_trans != NULL) && (rdma_trans->peer_type & DHMP_TRANSPORT_TYPE_CLIENT_NORMAL)) {
-            app_mem_infos[index].dram_used_size = rdma_trans->dram_used_size + rdma_trans->link_trans->dram_used_size;
-            app_mem_infos[index].nvm_used_size = rdma_trans->nvm_used_size + rdma_trans->link_trans->nvm_used_size;
+        if ((rdma_trans->link_trans != NULL) &&
+            (rdma_trans->peer_type & DHMP_TRANSPORT_TYPE_CLIENT_NORMAL)) {
+            app_mem_infos[index].dram_used_size =
+                rdma_trans->dram_used_size + rdma_trans->link_trans->dram_used_size;
+            app_mem_infos[index].nvm_used_size =
+                rdma_trans->nvm_used_size + rdma_trans->link_trans->nvm_used_size;
             index++;
         }
     }
@@ -197,7 +207,8 @@ retry:
             goto out;
         }
 
-        left_blk = list_entry(area->block_head[i].free_block_list.next, struct dhmp_free_block, free_block_entry);
+        left_blk = list_entry(area->block_head[i].free_block_list.next, struct dhmp_free_block,
+                              free_block_entry);
         list_del(&left_blk->free_block_entry);
         left_blk->size = left_blk->size / 2;
 
@@ -212,7 +223,8 @@ retry:
         area->block_head[i - 1].nr_free += 2;
         goto retry;
     } else {
-        res = list_entry(area->block_head[i].free_block_list.next, struct dhmp_free_block, free_block_entry);
+        res = list_entry(area->block_head[i].free_block_list.next, struct dhmp_free_block,
+                         free_block_entry);
         list_del(&res->free_block_entry);
         area->block_head[i].nr_free -= 1;
     }
@@ -267,7 +279,8 @@ static bool dhmp_malloc_one_block(struct dhmp_mc_response *response) {
     response->mr.addr = free_blk->addr;
     response->mr.length = free_blk->size;
 
-    DEBUG_LOG("malloc addr %p lkey %ld length is %d", free_blk->addr, free_blk->mr->lkey, free_blk->mr->length);
+    DEBUG_LOG("malloc addr %p lkey %ld length is %d", free_blk->addr, free_blk->mr->lkey,
+              free_blk->mr->length);
 
     snprintf(free_blk->addr, response->req_info.req_size, "nvmhhhhhhhh%p", free_blk);
 
@@ -313,6 +326,8 @@ static void dhmp_malloc_request_handler(struct dhmp_transport *rdma_trans, struc
     struct dhmp_msg res_msg;
 
     struct dhmp_mc_response response;
+    response.req_info = request;
+
     // INFO_LOG("recclient req size %d", response.req_info.req_size);
     if (request.req_size <= buddy_size[MAX_ORDER - 1]) {
         // DEBUG_LOG ( "alloc buddy block" );
@@ -667,8 +682,9 @@ static struct dhmp_dram_entry *dhmp_create_new_dram_entry(void *nvm_addr, size_t
     }
 
     server_dev = dhmp_get_dev_from_server();
-    dram_entry->dram_mr = ibv_reg_mr(server_dev->pd, dram_addr, length,
-                                     IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE);
+    dram_entry->dram_mr =
+        ibv_reg_mr(server_dev->pd, dram_addr, length,
+                   IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE);
     if (!dram_entry->dram_mr) {
         ERROR_LOG("allocate dram mr error");
         goto out_dram_addr;
@@ -727,7 +743,8 @@ static struct dhmp_transport *dhmp_get_connect_trans(struct dhmp_transport *poll
     return client->connect_trans[index];
 }
 
-static void dhmp_apply_dram_request_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg) {
+static void dhmp_apply_dram_request_handler(struct dhmp_transport *rdma_trans,
+                                            struct dhmp_msg *msg) {
     int i, length;
     struct dhmp_nvm_info *tmp_head;
 
@@ -781,7 +798,8 @@ static void dhmp_apply_dram_request_handler(struct dhmp_transport *rdma_trans, s
     dhmp_inform_watcher_func(server->watcher_trans);
 }
 
-static void dhmp_apply_dram_response_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg) {
+static void dhmp_apply_dram_response_handler(struct dhmp_transport *rdma_trans,
+                                             struct dhmp_msg *msg) {
     struct dhmp_dram_info *dram_info_head;
     struct dhmp_transport *connect_trans;
     struct dhmp_addr_info *addr_info;
@@ -798,7 +816,8 @@ static void dhmp_apply_dram_response_handler(struct dhmp_transport *rdma_trans, 
     connect_trans = dhmp_get_connect_trans(rdma_trans);
 
     for (i = 0; i < length; i++) {
-        DEBUG_LOG("dram addr %p lkey %ld", dram_info_head->dram_mr.addr, dram_info_head->dram_mr.lkey);
+        DEBUG_LOG("dram addr %p lkey %ld", dram_info_head->dram_mr.addr,
+                  dram_info_head->dram_mr.lkey);
 
         dhmp_addr = dhmp_transfer_dhmp_addr(connect_trans, dram_info_head->nvm_addr);
         index = dhmp_hash_in_client(dhmp_addr);
@@ -823,7 +842,8 @@ static void dhmp_apply_dram_response_handler(struct dhmp_transport *rdma_trans, 
     --client->poll_num;
 }
 
-static void dhmp_clear_dram_request_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg) {
+static void dhmp_clear_dram_request_handler(struct dhmp_transport *rdma_trans,
+                                            struct dhmp_msg *msg) {
     int i, length;
     struct dhmp_nvm_info *tmp_head;
     struct dhmp_nvm_info nvm_info[DHMP_MAX_OBJ_NUM];
@@ -852,7 +872,8 @@ static void dhmp_clear_dram_request_handler(struct dhmp_transport *rdma_trans, s
     dhmp_inform_watcher_func(server->watcher_trans);
 }
 
-static void dhmp_clear_dram_response_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg) {
+static void dhmp_clear_dram_response_handler(struct dhmp_transport *rdma_trans,
+                                             struct dhmp_msg *msg) {
     struct dhmp_transport *connect_trans;
     struct dhmp_addr_info *addr_info;
     struct dhmp_nvm_info *tmp_head;
@@ -879,7 +900,8 @@ static void dhmp_clear_dram_response_handler(struct dhmp_transport *rdma_trans, 
     --client->poll_num;
 }
 
-static void dhmp_server_info_request_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg) {
+static void dhmp_server_info_request_handler(struct dhmp_transport *rdma_trans,
+                                             struct dhmp_msg *msg) {
     struct dhmp_server_mem_info server_mem_info;
     struct dhmp_msg response_msg;
 
@@ -893,7 +915,8 @@ static void dhmp_server_info_request_handler(struct dhmp_transport *rdma_trans, 
     dhmp_post_send(rdma_trans, &response_msg);
 }
 
-static void dhmp_server_info_response_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg) {
+static void dhmp_server_info_response_handler(struct dhmp_transport *rdma_trans,
+                                              struct dhmp_msg *msg) {
     struct dhmp_server_mem_info *server_mem_info;
     int node_index;
 
@@ -993,7 +1016,8 @@ static void dhmp_wc_success_handler(struct ibv_wc *wc) {
     // passive end handler
     case IBV_WC_RECV:
         dhmp_wc_recv_handler(rdma_trans, &msg);
-        dhmp_post_recv(rdma_trans, task_ptr->sge.addr); // last recv has been consumed, post for next.
+        dhmp_post_recv(rdma_trans,
+                       task_ptr->sge.addr); // last recv has been consumed, post for next.
         break;
     case IBV_WC_RECV_RDMA_WITH_IMM:
 
@@ -1076,7 +1100,8 @@ static struct dhmp_cq *dhmp_cq_get(struct dhmp_device *device, struct dhmp_conte
     }
 
     dcq->ctx = ctx;
-    retval = dhmp_context_add_event_fd(dcq->ctx, EPOLLIN, dcq->comp_channel->fd, dcq, dhmp_comp_channel_handler);
+    retval = dhmp_context_add_event_fd(dcq->ctx, EPOLLIN, dcq->comp_channel->fd, dcq,
+                                       dhmp_comp_channel_handler);
     if (retval) {
         ERROR_LOG("context add comp channel fd error.");
         goto cleanchannel;
@@ -1261,7 +1286,8 @@ static int dhmp_replica_addr_to_id(struct sockaddr_in *sock) {
  * @brief callback function to deal with cm_event RDMA_CM_CONNECTION_REQUEST
  *
  * @param[in] event rdma_cm_event polled from event channel
- * @param[in] rdma_trans listening transports, which is actually referenced by both id and listen_id in rdma_event
+ * @param[in] rdma_trans listening transports, which is actually referenced by both id and listen_id
+ * in rdma_event
  * @return int
  */
 static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans) {
@@ -1281,9 +1307,11 @@ static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transp
         normal_trans = dhmp_is_exist_connection(&event->id->route.addr.dst_sin);
         if (normal_trans) {
             // XXX dhmp_transport_create is_poll etc. can be optimized
-            new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, DHMP_TRANSPORT_TYPE_CLIENT_POLL);
+            new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device,
+                                              DHMP_TRANSPORT_TYPE_CLIENT_POLL);
         } else {
-            new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, DHMP_TRANSPORT_TYPE_CLIENT_NORMAL);
+            new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device,
+                                              DHMP_TRANSPORT_TYPE_CLIENT_NORMAL);
         }
         if (!new_trans) {
             ERROR_LOG("rdma trans process connect request error.");
@@ -1333,7 +1361,8 @@ static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transp
         int replica_id;
         // XXX if maybe redundant
 
-        new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, DHMP_TRANSPORT_TYPE_REPLICA_NORMAL);
+        new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device,
+                                          DHMP_TRANSPORT_TYPE_REPLICA_NORMAL);
         if (!new_trans) {
             ERROR_LOG("rdma trans process connect request error.");
             return -1;
@@ -1382,8 +1411,10 @@ out:
 static int on_cm_established(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans) {
     int retval = 0;
 
-    memcpy(&rdma_trans->local_addr, &rdma_trans->cm_id->route.addr.src_sin, sizeof(rdma_trans->local_addr));
-    memcpy(&rdma_trans->peer_addr, &rdma_trans->cm_id->route.addr.dst_sin, sizeof(rdma_trans->peer_addr));
+    memcpy(&rdma_trans->local_addr, &rdma_trans->cm_id->route.addr.src_sin,
+           sizeof(rdma_trans->local_addr));
+    memcpy(&rdma_trans->peer_addr, &rdma_trans->cm_id->route.addr.dst_sin,
+           sizeof(rdma_trans->peer_addr));
     rdma_trans->trans_state = DHMP_TRANSPORT_STATE_CONNECTED;
 
     char buf[INET_ADDRSTRLEN];
@@ -1495,6 +1526,7 @@ static int dhmp_handle_ec_event(struct rdma_cm_event *event) {
     case RDMA_CM_EVENT_CONNECT_ERROR:
     case RDMA_CM_EVENT_ADDR_ERROR:
     case RDMA_CM_EVENT_ROUTE_ERROR:
+    case RDMA_CM_EVENT_REJECTED:
         retval = on_cm_error(event, rdma_trans);
         break;
     default:
@@ -1549,8 +1581,8 @@ static int dhmp_event_channel_create(struct dhmp_transport *rdma_trans) {
         goto clean_ec;
     }
 
-    dhmp_context_add_event_fd(rdma_trans->ctx, EPOLLIN, rdma_trans->event_channel->fd, rdma_trans->event_channel,
-                              dhmp_event_channel_handler);
+    dhmp_context_add_event_fd(rdma_trans->ctx, EPOLLIN, rdma_trans->event_channel->fd,
+                              rdma_trans->event_channel, dhmp_event_channel_handler);
     return retval;
 
 clean_ec:
@@ -1615,7 +1647,8 @@ static void dhmp_post_all_recv(struct dhmp_transport *rdma_trans) {
     }
 }
 
-static struct dhmp_send_mr *dhmp_get_mr_from_send_list(struct dhmp_transport *rdma_trans, void *addr, int length) {
+static struct dhmp_send_mr *dhmp_get_mr_from_send_list(struct dhmp_transport *rdma_trans,
+                                                       void *addr, int length) {
     struct dhmp_send_mr *res, *tmp;
     void *new_addr = NULL;
 
@@ -1697,7 +1730,7 @@ struct dhmp_transport *dhmp_transport_create(struct dhmp_context *ctx, struct dh
         goto out;
     }
 
-    if (type & DHMP_TRANSPORT_TYPE_MASK_CONNECTION_POLL) {
+    if (!(type & DHMP_TRANSPORT_TYPE_MASK_CONNECTION_LISTEN)) {
         err = dhmp_memory_register(rdma_trans->device->pd, &rdma_trans->send_mr, SEND_REGION_SIZE);
         if (err)
             goto out_event_channel;
@@ -1780,8 +1813,8 @@ int dhmp_transport_connect(struct dhmp_transport *rdma_trans, const char *url, i
         ERROR_LOG("rdma create id error.");
         goto clean_rdmatrans;
     }
-    retval =
-        rdma_resolve_addr(rdma_trans->cm_id, NULL, (struct sockaddr *)&rdma_trans->peer_addr, ADDR_RESOLVE_TIMEOUT);
+    retval = rdma_resolve_addr(rdma_trans->cm_id, NULL, (struct sockaddr *)&rdma_trans->peer_addr,
+                               ADDR_RESOLVE_TIMEOUT);
     if (retval) {
         ERROR_LOG("RDMA Device resolve addr error.");
         rdma_trans->trans_state = DHMP_TRANSPORT_STATE_ERROR;
@@ -1808,7 +1841,8 @@ clean_rdmatrans:
  * @param length
  * @return int
  */
-int dhmp_rdma_read(struct dhmp_transport *rdma_trans, struct ibv_mr *mr, void *local_addr, int length) {
+int dhmp_rdma_read(struct dhmp_transport *rdma_trans, struct ibv_mr *mr, void *local_addr,
+                   int length) {
     struct dhmp_task *read_task;
     struct ibv_send_wr send_wr, *bad_wr = NULL;
     struct ibv_sge sge;
@@ -1870,8 +1904,8 @@ error:
     return -1;
 }
 
-int dhmp_rdma_write(struct dhmp_transport *rdma_trans, struct dhmp_addr_info *addr_info, struct ibv_mr *mr,
-                    void *local_addr, int length) {
+int dhmp_rdma_write(struct dhmp_transport *rdma_trans, struct dhmp_addr_info *addr_info,
+                    struct ibv_mr *mr, void *local_addr, int length) {
     struct dhmp_task *write_task;
     struct ibv_send_wr send_wr, *bad_wr = NULL;
     struct ibv_sge sge;

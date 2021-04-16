@@ -29,8 +29,8 @@
 
 static void dhmp_print_config(struct dhmp_config *total_config_ptr) {
     int i;
-    INFO_LOG("server cnt = %d", total_config_ptr->nets_cnt);
-    for (i = 0; i < total_config_ptr->nets_cnt; i++) {
+    INFO_LOG("server cnt = %d", total_config_ptr->servers_cnt);
+    for (i = 0; i < total_config_ptr->servers_cnt; i++) {
 
         INFO_LOG("-------------------------------------------------");
         INFO_LOG("server id %d", total_config_ptr->server_infos_table[i].server_id);
@@ -97,12 +97,12 @@ static int dhmp_parse_client_node(struct dhmp_config *config_ptr, int index, xml
 }
 
 static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index, xmlDocPtr doc, xmlNodePtr curnode) {
-    config_ptr->nets_cnt++;
 
     xmlChar *val;
     val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
     int server_id = atoi((const char *)val);
     config_ptr->server_infos_table[server_id].server_id = server_id;
+    config_ptr->server_ids[config_ptr->servers_cnt++] = server_id;
     xmlFree(val);
 
     curnode = curnode->xmlChildrenNode;
@@ -153,12 +153,12 @@ static int dhmp_parse_server_node(struct dhmp_config *config_ptr, int index, xml
 }
 
 static int dhmp_parse_group_node(struct dhmp_config *config_ptr, int index, xmlDocPtr doc, xmlNodePtr curnode) {
-    config_ptr->groups_cnt++;
 
     xmlChar *val;
     val = xmlGetProp(curnode, (const xmlChar *)DHMP_XML_ATTR_ID_STR);
     int group_id = atoi((const char *)val);
     config_ptr->group_infos_table[group_id].group_id = group_id;
+    config_ptr->group_ids[config_ptr->groups_cnt++] = group_id;
     xmlFree(val);
 
     curnode = curnode->xmlChildrenNode;
@@ -195,7 +195,7 @@ static void dhmp_set_curnode_id(struct dhmp_config *config_ptr) {
     ifr = conf.ifc_req;
 
     bool valid = false;
-    for (k = 0; k < config_ptr->nets_cnt && !valid; k++) {
+    for (k = 0; k < config_ptr->servers_cnt && !valid; k++) {
         for (i = 0; i < dev_num && !valid; i++, ifr++) {
             sin = (struct sockaddr_in *)(&ifr->ifr_addr);
             // find the addr of local nic that corresponding to config xml
@@ -211,9 +211,9 @@ static void dhmp_set_curnode_id(struct dhmp_config *config_ptr) {
                 }
             }
             if (addr != NULL && replica_addr != NULL) {
-                for (i = 0; i < config_ptr->nets_cnt; i++) {
+                for (i = 0; i < config_ptr->servers_cnt; i++) {
                     if (!strcmp(config_ptr->server_infos_table[i].net_info.addr, addr)) {
-                        config_ptr->curnet_id = i;
+                        config_ptr->local_server_id = i;
                     }
                 }
                 valid = true;
@@ -221,7 +221,7 @@ static void dhmp_set_curnode_id(struct dhmp_config *config_ptr) {
         }
     }
 
-    if (k >= config_ptr->nets_cnt) {
+    if (k >= config_ptr->servers_cnt) {
         if (addr == NULL) {
             ERROR_LOG("can't find ip corresponding to NIC:%s", config_ptr->server_infos_table[k].net_info.nic_name);
         }
@@ -259,8 +259,8 @@ int dhmp_config_init(struct dhmp_config *config_ptr, bool is_client) {
         goto cleandoc;
     }
 
-    config_ptr->nets_cnt = 0;
-    config_ptr->curnet_id = -1;
+    config_ptr->servers_cnt = 0;
+    config_ptr->local_server_id = -1;
     curnode = curnode->xmlChildrenNode;
     while (curnode) {
         if (!xmlStrcmp(curnode->name, (const xmlChar *)DHMP_WATCHER_STR)) {

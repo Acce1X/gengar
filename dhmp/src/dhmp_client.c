@@ -1,4 +1,5 @@
 #include "dhmp_client.h"
+#include "dhmp_config.h"
 #include "dhmp_dev.h"
 #include "dhmp_hash.h"
 #include "dhmp_log.h"
@@ -96,6 +97,12 @@ void dhmp_client_init() {
     /*init normal connection*/
     memset(client->connect_trans, 0, DHMP_MAX_SERVER_GROUP_NUM * sizeof(struct dhmp_transport *));
     for (i = 0; i < client->config.groups_cnt; i++) {
+        // TODO supposed to decide the leader
+        int group_id = client->config.group_ids[i];
+        struct dhmp_replica_group_info *g_info_ptr = &client->config.group_infos_table[group_id];
+        int leader_id = g_info_ptr->member_ids[0];
+        struct dhmp_server_info *s_info_ptr = &client->config.server_infos_table[leader_id];
+        struct dhmp_net_info *leader_net_info_ptr = &s_info_ptr->net_info;
         INFO_LOG("create the [%d]-th normal transport.", i);
         client->connect_trans[i] =
             dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), DHMP_TRANSPORT_TYPE_SERVER_NORMAL);
@@ -104,12 +111,11 @@ void dhmp_client_init() {
             continue;
         }
         client->connect_trans[i]->node_id = i;
-        dhmp_transport_connect(client->connect_trans[i], client->config.server_infos_table[i].net_info.addr,
-                               client->config.server_infos_table[i].net_info.port);
+        dhmp_transport_connect(client->connect_trans[i], leader_net_info_ptr->addr, leader_net_info_ptr->port);
     }
 
     // XXX polling to wait for synchronize
-    for (i = 0; i < client->config.nets_cnt; i++) {
+    for (i = 0; i < client->config.servers_cnt; i++) {
         if (client->connect_trans[i] == NULL)
             continue;
         while (client->connect_trans[i]->trans_state < DHMP_TRANSPORT_STATE_CONNECTED)
@@ -119,6 +125,11 @@ void dhmp_client_init() {
     /*init the poll connection*/
     memset(client->poll_trans, 0, DHMP_MAX_SERVER_GROUP_NUM * sizeof(struct dhmp_transport *));
     for (i = 0; i < client->config.groups_cnt; i++) {
+        int group_id = client->config.group_ids[i];
+        struct dhmp_replica_group_info *g_info_ptr = &client->config.group_infos_table[group_id];
+        int leader_id = g_info_ptr->member_ids[0];
+        struct dhmp_server_info *s_info_ptr = &client->config.server_infos_table[leader_id];
+        struct dhmp_net_info *leader_net_info_ptr = &s_info_ptr->net_info;
         INFO_LOG("create the [%d]-th poll transport.", i);
         client->poll_trans[i] =
             dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), DHMP_TRANSPORT_TYPE_SERVER_POLL);
@@ -128,10 +139,7 @@ void dhmp_client_init() {
             continue;
         }
         client->poll_trans[i]->node_id = i;
-
-        int server_id = client->config.group_infos_table[i].member_ids[0];
-        dhmp_transport_connect(client->poll_trans[i], client->config.server_infos_table[server_id].net_info.addr,
-                               client->config.server_infos_table[server_id].net_info.port);
+        dhmp_transport_connect(client->poll_trans[i], leader_net_info_ptr->addr, leader_net_info_ptr->port);
     }
 
     for (i = 0; i < client->config.groups_cnt; i++) {
@@ -211,22 +219,22 @@ static void dhmp_close_connection(struct dhmp_transport *rdma_trans) {
 void dhmp_client_destroy() {
     int i;
     INFO_LOG("send all disconnect start.");
-    for (i = 0; i < client->config.nets_cnt; i++) {
+    for (i = 0; i < client->config.servers_cnt; i++) {
         dhmp_close_connection(client->connect_trans[i]);
     }
 
-    for (i = 0; i < client->config.nets_cnt; i++) {
+    for (i = 0; i < client->config.servers_cnt; i++) {
         dhmp_close_connection(client->poll_trans[i]);
     }
 
-    for (i = 0; i < client->config.nets_cnt; i++) {
+    for (i = 0; i < client->config.servers_cnt; i++) {
         if (client->connect_trans[i] == NULL)
             continue;
         while (client->connect_trans[i]->trans_state == DHMP_TRANSPORT_STATE_CONNECTED)
             ;
     }
 
-    for (i = 0; i < client->config.nets_cnt; i++) {
+    for (i = 0; i < client->config.servers_cnt; i++) {
         if (client->poll_trans[i] == NULL)
             continue;
         while (client->poll_trans[i]->trans_state == DHMP_TRANSPORT_STATE_CONNECTED)

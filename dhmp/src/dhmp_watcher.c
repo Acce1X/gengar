@@ -14,14 +14,14 @@ static json_object *dhmp_get_json_data() {
     json_object *dram_total_size_arr[DHMP_MAX_SERVER_GROUP_NUM], *nvm_total_size_arr[DHMP_MAX_SERVER_GROUP_NUM],
         *server_jobj, *app_jobj, *res, *dram_used_size, *nvm_used_size, *apps_arr;
 
-    for (i = 0; i < watcher->config.nets_cnt; i++) {
+    for (i = 0; i < watcher->config.servers_cnt; i++) {
         dram_total_size_arr[i] = json_object_new_int64(watcher->servers_info[i].dram_total_size);
         nvm_total_size_arr[i] = json_object_new_int64(watcher->servers_info[i].nvm_total_size);
     }
 
     res = json_object_new_object();
 
-    for (i = 0; i < watcher->config.nets_cnt; i++) {
+    for (i = 0; i < watcher->config.servers_cnt; i++) {
         snprintf(server_name, 24, "server%d", i + 1);
 
         server_jobj = json_object_new_object();
@@ -174,14 +174,14 @@ void dhmp_watcher_init() {
                                watcher->config.server_infos_table[leader_id].net_info.port);
     }
 
-    for (i = 0; i < watcher->config.nets_cnt; i++) {
+    for (i = 0; i < watcher->config.servers_cnt; i++) {
         if (watcher->connect_trans[i] == NULL)
             continue;
         while (watcher->connect_trans[i]->trans_state < DHMP_TRANSPORT_STATE_CONNECTED)
             ;
     }
 
-    for (i = 0; i < watcher->config.nets_cnt; i++)
+    for (i = 0; i < watcher->config.servers_cnt; i++)
         dhmp_fetch_server_info(i, watcher->connect_trans[i]);
 
     dhmp_build_tcp_connection();

@@ -15,9 +15,8 @@
 extern const size_t buddy_size[MAX_ORDER];
 /*XXX to some extent, it is kind of a ugly subtitution of thread stack in multithread model,
 since the event handler loop is single-thread. If you want to keep the singe thread model and not
-add extra blocking mechanism to achieve the purpose of synchronization, you have to do so. It is supposed
-to be replaced in future.
-    anyway, it do works. :)
+add extra blocking mechanism to achieve the purpose of synchronization, you have to do so. It is
+supposed to be replaced in future. anyway, it do works. :)
 */
 struct client_req_meta_info {
     uuid_t req_id;
@@ -31,7 +30,12 @@ struct client_req_meta_info {
     struct hlist_node h_entry;
 };
 
-enum dhmp_log_entry_op_type { DHMP_MALLOC, DHMP_FREE, DHMP_WRITE };
+enum dhmp_log_entry_op_type
+{
+    DHMP_MALLOC,
+    DHMP_FREE,
+    DHMP_WRITE
+};
 
 struct dhmp_log_entry {
     struct list_head log_entry;
@@ -85,7 +89,8 @@ struct dhmp_server {
     int server_id; // my id
     int group_id;  // my replica group id
     struct dhmp_server_info
-        *other_replica_info_ptrs[DHMP_MAX_SERVER_GROUP_MEMBER_NUM - 1]; // my replica group members(not include myself)
+        *other_replica_info_ptrs[DHMP_MAX_SERVER_GROUP_MEMBER_NUM -
+                                 1]; // my replica group members(not include myself)
     int other_replica_cnts;
     struct dhmp_server_info *my_server_info_ptr;
 
@@ -111,12 +116,12 @@ struct dhmp_server {
 
     /*replicas infos*/ // TODO init
     struct dhmp_transport *replica_listen_transport;
-    struct dhmp_transport *replica_transports_table[DHMP_MAX_SERVER_GROUP_MEMBER_NUM - 1]; // server_id -> trans map
+    struct dhmp_transport
+        *replica_transports_table[DHMP_MAX_SERVER_GROUP_MEMBER_NUM - 1]; // server_id -> trans map
 
     // TODO init
     struct list_head log; // type : struct dhmp_msg
-    pthread_t log_thread;
-    pthread_mutex_t log_lock;
+
     struct hlist_head client_request_table[251]; /* type :struct client_req_meta_info
                                                     record the incoming request uuid & transport*/
 };

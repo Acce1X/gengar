@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
 
     dhmp_client_init();
 
-    // addr = dhmp_malloc(size);
+    addr = dhmp_malloc(size);
 
     // dhmp_write(addr, str, size);
 
