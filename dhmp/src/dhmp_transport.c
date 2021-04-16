@@ -33,8 +33,8 @@ static void dhmp_inform_watcher_func(struct dhmp_transport *watcher_trans);
 static void dhmp_mem_change_handle(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg);
 
 /*memory management*/
-static bool dhmp_malloc_one_block(struct dhmp_msg *msg, struct dhmp_mc_response *response);
-static bool dhmp_malloc_more_area(struct dhmp_msg *msg, struct dhmp_mc_response *response_msg, size_t length);
+static bool dhmp_malloc_one_block(struct dhmp_mc_response *response);
+static bool dhmp_malloc_more_area(struct dhmp_mc_response *response_msg, size_t length);
 
 static void dhmp_free_one_block(struct ibv_mr *mr);
 static void dhmp_free_one_area(struct ibv_mr *mr);
@@ -81,6 +81,7 @@ static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transp
 static int on_cm_established(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans);
 static int on_cm_disconnected(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans);
 static int on_cm_error(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans);
+
 static void dhmp_destroy_source(struct dhmp_transport *rdma_trans);
 static int dhmp_handle_ec_event(struct rdma_cm_event *event);
 
@@ -107,7 +108,7 @@ static void dhmp_inform_watcher_func(struct dhmp_transport *watcher_trans) {
 
     pthread_mutex_lock(&server->mutex_client_list);
     list_for_each_entry(rdma_trans, &server->client_list, client_entry) {
-        if ((rdma_trans->link_trans != NULL) && (!rdma_trans->is_poll_qp)) {
+        if ((rdma_trans->link_trans != NULL) && (rdma_trans->peer_type & DHMP_TRANSPORT_TYPE_CLIENT_NORMAL)) {
             app_mem_infos[index].dram_used_size = rdma_trans->dram_used_size + rdma_trans->link_trans->dram_used_size;
             app_mem_infos[index].nvm_used_size = rdma_trans->nvm_used_size + rdma_trans->link_trans->nvm_used_size;
             index++;
@@ -227,7 +228,7 @@ out:
     return res;
 }
 
-static bool dhmp_malloc_one_block(struct dhmp_msg *msg, struct dhmp_mc_response *response) {
+static bool dhmp_malloc_one_block(struct dhmp_mc_response *response) {
     struct dhmp_free_block *free_blk = NULL;
     struct dhmp_area *area = NULL;
     int index = 0;
@@ -277,7 +278,7 @@ out:
     return false;
 }
 
-static bool dhmp_malloc_more_area(struct dhmp_msg *msg, struct dhmp_mc_response *response_msg, size_t length) {
+static bool dhmp_malloc_more_area(struct dhmp_mc_response *response_msg, size_t length) {
     struct dhmp_area *area;
 
     area = dhmp_area_create(false, length);
@@ -310,40 +311,35 @@ static void dhmp_malloc_request_handler(struct dhmp_transport *rdma_trans, struc
     bool result = true;
 
     struct dhmp_msg res_msg;
+
     struct dhmp_mc_response response;
     // INFO_LOG("recclient req size %d", response.req_info.req_size);
     if (request.req_size <= buddy_size[MAX_ORDER - 1]) {
         // DEBUG_LOG ( "alloc buddy block" );
-        result = dhmp_malloc_one_block(msg, &response);
+        result = dhmp_malloc_one_block(&response);
     } else if (request.req_size <= SINGLE_AREA_SIZE) {
         // DEBUG_LOG ( "alloc one area" );
-        result = dhmp_malloc_more_area(msg, &response, SINGLE_AREA_SIZE);
+        result = dhmp_malloc_more_area(&response, SINGLE_AREA_SIZE);
     } else {
         // DEBUG_LOG ( "alloc more area" );
-        result = dhmp_malloc_more_area(msg, &response, response.req_info.req_size);
+        result = dhmp_malloc_more_area(&response, response.req_info.req_size);
     }
 
     if (result) {
-        res_msg.msg_type = DHMP_MSG_MALLOC_RESPONSE;
-        res_msg.data_size = sizeof(struct dhmp_mc_response);
-        res_msg.data = &response;
-        // dhmp_post_send(rdma_trans, &res_msg);
-
+        DHMP_MSG_PACK(res_msg, DHMP_MSG_MALLOC_RESPONSE, response);
         /*count the server memory,and inform the watcher*/
         /* TODO should be only handled by leader
          rdma_trans->nvm_used_size += response.mr.length;
          dhmp_inform_watcher_func(server->watcher_trans);
          */
     } else {
-        res_msg.msg_type = DHMP_MSG_MALLOC_ERROR;
-        res_msg.data_size = sizeof(struct dhmp_mc_response);
-        res_msg.data = &response;
+        DHMP_MSG_PACK(res_msg, DHMP_MSG_MALLOC_ERROR, response);
     }
 
     if (rdma_trans->peer_type == DHMP_TRANSPORT_TYPE_CLIENT_NORMAL) {
         // leader received request from client
         if (result) {
-            dhmp_leader_forward_msg(msg);
+            dhmp_leader_forward_msg_broadcast(msg);
 
             struct client_req_meta_info *req_info;
             req_info = malloc(sizeof(struct client_req_meta_info));
@@ -404,16 +400,16 @@ static void dhmp_malloc_response_handler(struct dhmp_transport *rdma_trans, stru
                 break;
             }
         }
+
         if (value != NULL) {
             // note: no need for lock since it's single thread.
-            struct dhmp_msg res_msg; // leader's new response to client
+
             if (++(value->res_cnt) > server->other_replica_cnts / 2) {
-                struct dhmp_msg res_msg;
-                msg->msg_type = DHMP_MSG_MALLOC_RESPONSE;
-                msg->data = &value->mc_res;
-                msg->data_size = sizeof(struct dhmp_mc_response);
+                struct dhmp_msg res_msg; // leader's new response to client
+                DHMP_MSG_PACK(res_msg, DHMP_MSG_MALLOC_RESPONSE, value->mc_res);
                 dhmp_post_send(value->trans_ptr, &res_msg);
                 // TODO notify leader that the fowarding is done
+                DEBUG_LOG("malloc request have received majority approved");
                 hlist_del(&value->h_entry);
                 free(value);
             }
@@ -445,7 +441,9 @@ static void dhmp_malloc_error_handler(struct dhmp_transport *rdma_trans, struct 
     } else if (rdma_trans->peer_type == DHMP_TRANSPORT_TYPE_REPLICA_NORMAL) {
         // leader receive failure response from followers, retry
         // TODO definition
-        dhmp_leader_forward_msg_unicast(rdma_trans, response_msg.req_info);
+        struct dhmp_msg msg;
+        DHMP_MSG_PACK(msg, DHMP_MSG_MALLOC_REQUEST, response_msg.req_info);
+        //        dhmp_leader_forward_msg_unicast(rdma_trans, &msg);
     } else {
         ERROR_LOG("invalid malloc requester type");
     }
@@ -719,7 +717,7 @@ static bool dhmp_destroy_dram_entry(void *nvm_addr) {
 }
 
 static struct dhmp_transport *dhmp_get_connect_trans(struct dhmp_transport *poll_trans) {
-    struct dhmp_transport *connect_trans;
+
     int index;
 
     for (index = 0; index < DHMP_MAX_SERVER_GROUP_NUM; index++) {
@@ -732,7 +730,7 @@ static struct dhmp_transport *dhmp_get_connect_trans(struct dhmp_transport *poll
 static void dhmp_apply_dram_request_handler(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg) {
     int i, length;
     struct dhmp_nvm_info *tmp_head;
-    struct dhmp_dram_entry *dram_entry;
+
     struct dhmp_dram_info dram_info[DHMP_MAX_OBJ_NUM];
     struct dhmp_msg response_msg;
     long cur_dram_threshold;
@@ -1178,7 +1176,7 @@ static int on_cm_addr_resolved(struct rdma_cm_event *event, struct dhmp_transpor
 
 static int on_cm_route_resolved(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans) {
     struct rdma_conn_param conn_param;
-    int i, retval = 0;
+    int retval = 0;
 
     retval = dhmp_qp_create(rdma_trans);
     if (retval) {
@@ -1267,10 +1265,10 @@ static int dhmp_replica_addr_to_id(struct sockaddr_in *sock) {
  * @return int
  */
 static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transport *rdma_trans) {
-    struct dhmp_transport *new_trans, *normal_trans;
+    struct dhmp_transport *new_trans = NULL, *normal_trans;
     struct rdma_conn_param conn_param;
     int i, retval = 0;
-    char *peer_addr;
+
     /*
     if(server->watcher_trans==NULL||server->cur_connections%2==0)
             normal_trans=NULL;
@@ -1279,15 +1277,14 @@ static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transp
     dhmp_transport, client_entry);
     */
     // XXX can be replaced by flg
-    if (rdma_trans == server->listen_trans) {
+    if (rdma_trans->peer_type & DHMP_TRANSPORT_TYPE_CLIENT_LISTEN) {
         normal_trans = dhmp_is_exist_connection(&event->id->route.addr.dst_sin);
         if (normal_trans) {
             // XXX dhmp_transport_create is_poll etc. can be optimized
-            new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, false, true);
+            new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, DHMP_TRANSPORT_TYPE_CLIENT_POLL);
         } else {
-            new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, false, false);
+            new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, DHMP_TRANSPORT_TYPE_CLIENT_NORMAL);
         }
-        new_trans->peer_type |= DHMP_TRANSPORT_TYPE_MASK_CONNECTION_NORMAL;
         if (!new_trans) {
             ERROR_LOG("rdma trans process connect request error.");
             return -1;
@@ -1332,12 +1329,11 @@ static int on_cm_connect_request(struct rdma_cm_event *event, struct dhmp_transp
         new_trans->trans_state = DHMP_TRANSPORT_STATE_CONNECTING;
         dhmp_post_all_recv(new_trans);
         return retval;
-    } else if (rdma_trans == server->replica_listen_transport) {
+    } else if (rdma_trans->peer_type & DHMP_TRANSPORT_TYPE_REPLICA_LISTEN) {
         int replica_id;
         // XXX if maybe redundant
 
-        new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, false, false);
-        new_trans->peer_type |= DHMP_TRANSPORT_TYPE_MASK_PEER_SERVER;
+        new_trans = dhmp_transport_create(rdma_trans->ctx, rdma_trans->device, DHMP_TRANSPORT_TYPE_REPLICA_NORMAL);
         if (!new_trans) {
             ERROR_LOG("rdma trans process connect request error.");
             return -1;
@@ -1609,7 +1605,7 @@ out:
 static void dhmp_post_all_recv(struct dhmp_transport *rdma_trans) {
     int i, single_region_size = 0;
 
-    if (rdma_trans->is_poll_qp)
+    if (rdma_trans->peer_type & DHMP_TRANSPORT_TYPE_CLIENT_POLL)
         single_region_size = SINGLE_POLL_RECV_REGION;
     else
         single_region_size = SINGLE_NORM_RECV_REGION;
@@ -1679,8 +1675,8 @@ error:
 
 //=============================== public methods ===============================
 
-struct dhmp_transport *dhmp_transport_create(struct dhmp_context *ctx, struct dhmp_device *dev, bool is_listen,
-                                             bool is_poll_qp) {
+struct dhmp_transport *dhmp_transport_create(struct dhmp_context *ctx, struct dhmp_device *dev,
+                                             enum dhmp_transport_type type) {
     struct dhmp_transport *rdma_trans;
     int err = 0;
 
@@ -1701,7 +1697,7 @@ struct dhmp_transport *dhmp_transport_create(struct dhmp_context *ctx, struct dh
         goto out;
     }
 
-    if (!is_listen) {
+    if (type & DHMP_TRANSPORT_TYPE_MASK_CONNECTION_POLL) {
         err = dhmp_memory_register(rdma_trans->device->pd, &rdma_trans->send_mr, SEND_REGION_SIZE);
         if (err)
             goto out_event_channel;
@@ -1709,19 +1705,10 @@ struct dhmp_transport *dhmp_transport_create(struct dhmp_context *ctx, struct dh
         err = dhmp_memory_register(rdma_trans->device->pd, &rdma_trans->recv_mr, RECV_REGION_SIZE);
         if (err)
             goto out_send_mr;
-
-        rdma_trans->is_poll_qp = is_poll_qp;
     }
-
-    if (is_listen) {
-        rdma_trans->peer_type |= DHMP_TRANSPORT_TYPE_MASK_CONNECTION_LISTEN;
-    } else if (is_poll_qp) {
-        rdma_trans->peer_type |= DHMP_TRANSPORT_TYPE_MASK_CONNECTION_POLL;
-    } else {
-        rdma_trans->peer_type |= DHMP_TRANSPORT_TYPE_MASK_CONNECTION_NORMAL;
-    }
-
+    rdma_trans->peer_type = type;
     return rdma_trans;
+
 out_send_mr:
     ibv_dereg_mr(rdma_trans->send_mr.mr);
     free(rdma_trans->send_mr.addr);

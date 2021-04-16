@@ -95,15 +95,17 @@ void dhmp_client_init() {
 
     /*init normal connection*/
     memset(client->connect_trans, 0, DHMP_MAX_SERVER_GROUP_NUM * sizeof(struct dhmp_transport *));
-    for (i = 0; i < client->config.nets_cnt; i++) {
+    for (i = 0; i < client->config.groups_cnt; i++) {
         INFO_LOG("create the [%d]-th normal transport.", i);
-        client->connect_trans[i] = dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), false, false);
+        client->connect_trans[i] =
+            dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), DHMP_TRANSPORT_TYPE_SERVER_NORMAL);
         if (!client->connect_trans[i]) {
             ERROR_LOG("create the [%d]-th transport error.", i);
             continue;
         }
         client->connect_trans[i]->node_id = i;
-        //   dhmp_transport_connect(client->connect_trans[i], );
+        dhmp_transport_connect(client->connect_trans[i], client->config.server_infos_table[i].net_info.addr,
+                               client->config.server_infos_table[i].net_info.port);
     }
 
     // XXX polling to wait for synchronize
@@ -118,7 +120,8 @@ void dhmp_client_init() {
     memset(client->poll_trans, 0, DHMP_MAX_SERVER_GROUP_NUM * sizeof(struct dhmp_transport *));
     for (i = 0; i < client->config.groups_cnt; i++) {
         INFO_LOG("create the [%d]-th poll transport.", i);
-        client->poll_trans[i] = dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), false, true);
+        client->poll_trans[i] =
+            dhmp_transport_create(&client->ctx, dhmp_get_dev_from_client(), DHMP_TRANSPORT_TYPE_SERVER_POLL);
 
         if (!client->poll_trans[i]) {
             ERROR_LOG("create the [%d]-th transport error.", i);

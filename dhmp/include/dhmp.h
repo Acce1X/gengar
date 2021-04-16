@@ -65,7 +65,6 @@
 typedef int uuid_t;
 
 enum dhmp_msg_type {
-
     DHMP_MSG_MALLOC_REQUEST,
     DHMP_MSG_MALLOC_RESPONSE,
     DHMP_MSG_MALLOC_ERROR,
@@ -86,8 +85,14 @@ struct dhmp_msg {
     enum dhmp_msg_type msg_type;
     size_t data_size;
     void *data;
-    struct list_head entry;
 };
+
+#define DHMP_MSG_PACK(msg, type, content)                                                                              \
+    do {                                                                                                               \
+        msg.msg_type = type;                                                                                           \
+        msg.data = &content;                                                                                           \
+        msg.data_size = sizeof(content);                                                                               \
+    } while (0)
 
 /*struct dhmp_addr_info is the addr struct in cluster*/
 struct dhmp_addr_info {

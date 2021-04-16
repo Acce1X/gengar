@@ -92,7 +92,7 @@ struct dhmp_transport {
     struct dhmp_mr send_mr;
     struct dhmp_mr recv_mr;
 
-    bool is_poll_qp;
+    // bool is_poll_qp;
     struct dhmp_transport *link_trans;
 
     long dram_used_size;
@@ -109,8 +109,8 @@ struct dhmp_send_mr {
     struct list_head send_mr_entry;
 };
 
-struct dhmp_transport *dhmp_transport_create(struct dhmp_context *ctx, struct dhmp_device *dev, bool is_listen,
-                                             bool is_poll_qp);
+struct dhmp_transport *dhmp_transport_create(struct dhmp_context *ctx, struct dhmp_device *dev,
+                                             enum dhmp_transport_type type);
 
 void dhmp_transport_destroy(struct dhmp_transport *rdma_trans);
 

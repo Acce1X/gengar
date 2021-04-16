@@ -4,8 +4,7 @@
 
 //=============================== public methods ===============================
 
-struct dhmp_task *dhmp_recv_task_create(struct dhmp_transport *rdma_trans,
-                                        void *addr) {
+struct dhmp_task *dhmp_recv_task_create(struct dhmp_transport *rdma_trans, void *addr) {
     struct dhmp_task *recv_task;
 
     recv_task = malloc(sizeof(struct dhmp_task));
@@ -19,7 +18,7 @@ struct dhmp_task *dhmp_recv_task_create(struct dhmp_transport *rdma_trans,
 
     /*according to the flag of is_poll_qp,
      decide to post what size sge*/
-    if (rdma_trans->is_poll_qp)
+    if (rdma_trans->peer_type & DHMP_TRANSPORT_TYPE_MASK_CONNECTION_POLL)
         recv_task->sge.length = SINGLE_POLL_RECV_REGION;
     else
         recv_task->sge.length = SINGLE_NORM_RECV_REGION;
@@ -30,8 +29,7 @@ struct dhmp_task *dhmp_recv_task_create(struct dhmp_transport *rdma_trans,
     return recv_task;
 }
 
-struct dhmp_task *dhmp_send_task_create(struct dhmp_transport *rdma_trans,
-                                        struct dhmp_msg *msg) {
+struct dhmp_task *dhmp_send_task_create(struct dhmp_transport *rdma_trans, struct dhmp_msg *msg) {
     struct dhmp_task *send_task;
     struct dhmp_mr *send_mr = &rdma_trans->send_mr;
 
@@ -41,8 +39,7 @@ struct dhmp_task *dhmp_send_task_create(struct dhmp_transport *rdma_trans,
         return NULL;
     }
 
-    send_task->sge.length =
-        sizeof(enum dhmp_msg_type) + sizeof(size_t) + msg->data_size;
+    send_task->sge.length = sizeof(enum dhmp_msg_type) + sizeof(size_t) + msg->data_size;
 
     if (send_mr->cur_pos + send_task->sge.length > SEND_REGION_SIZE)
         send_mr->cur_pos = 0;
@@ -55,16 +52,13 @@ struct dhmp_task *dhmp_send_task_create(struct dhmp_transport *rdma_trans,
 
     /*use msg build send task*/
     memcpy(send_task->sge.addr, &msg->msg_type, sizeof(enum dhmp_msg_type));
-    memcpy(send_task->sge.addr + sizeof(enum dhmp_msg_type), &msg->data_size,
-           sizeof(size_t));
-    memcpy(send_task->sge.addr + sizeof(enum dhmp_msg_type) + sizeof(size_t),
-           msg->data, msg->data_size);
+    memcpy(send_task->sge.addr + sizeof(enum dhmp_msg_type), &msg->data_size, sizeof(size_t));
+    memcpy(send_task->sge.addr + sizeof(enum dhmp_msg_type) + sizeof(size_t), msg->data, msg->data_size);
 
     return send_task;
 }
 
-struct dhmp_task *dhmp_read_task_create(struct dhmp_transport *rdma_trans,
-                                        struct dhmp_send_mr *smr, int length) {
+struct dhmp_task *dhmp_read_task_create(struct dhmp_transport *rdma_trans, struct dhmp_send_mr *smr, int length) {
     struct dhmp_task *read_task;
 
     read_task = malloc(sizeof(struct dhmp_task));
@@ -83,8 +77,7 @@ struct dhmp_task *dhmp_read_task_create(struct dhmp_transport *rdma_trans,
     return read_task;
 }
 
-struct dhmp_task *dhmp_write_task_create(struct dhmp_transport *rdma_trans,
-                                         struct dhmp_send_mr *smr, int length) {
+struct dhmp_task *dhmp_write_task_create(struct dhmp_transport *rdma_trans, struct dhmp_send_mr *smr, int length) {
     struct dhmp_task *write_task;
 
     write_task = malloc(sizeof(struct dhmp_task));

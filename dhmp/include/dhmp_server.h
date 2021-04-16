@@ -123,8 +123,6 @@ struct dhmp_server {
 
 extern struct dhmp_server *server;
 
-
-
 struct dhmp_area *dhmp_area_create(bool is_init_buddy, size_t length);
 
 bool dhmp_buddy_system_build(struct dhmp_area *area);
@@ -135,8 +133,9 @@ struct dhmp_device *dhmp_get_dev_from_server();
 
 void dhmp_server_append_log(struct dhmp_msg *msg);
 
-void dhmp_leader_forward_msg(struct dhmp_msg *msg);
+void dhmp_leader_forward_msg_broadcast(struct dhmp_msg *msg);
 
+void dhmp_leader_forward_msg_unicast(struct dhmp_transport *trans, struct dhmp_msg *msg);
 
 /**
  *	dhmp_server_init:init server

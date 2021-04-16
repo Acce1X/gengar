@@ -48,7 +48,6 @@ static void dhmp_malloc_work_handler(struct dhmp_work *work) {
     msg.msg_type = DHMP_MSG_MALLOC_REQUEST;
     msg.data_size = sizeof(struct dhmp_mc_request);
     msg.data = &req_msg;
-    msg.forward_flag = false;
 
     dhmp_post_send(malloc_work->rdma_trans, &msg);
 
@@ -113,7 +112,6 @@ static void dhmp_free_work_handler(struct dhmp_work *work) {
     msg.msg_type = DHMP_MSG_FREE_REQUEST;
     msg.data_size = sizeof(struct dhmp_free_request);
     msg.data = &req_msg;
-    msg.forward_flag = false;
 
     DEBUG_LOG("free addr is %p length is %d", addr_info->nvm_mr.addr, addr_info->nvm_mr.length);
 
@@ -222,7 +220,6 @@ static void dhmp_close_work_handler(struct dhmp_work *work) {
     msg.msg_type = DHMP_MSG_CLOSE_CONNECTION;
     msg.data_size = sizeof(int);
     msg.data = &tmp;
-    msg.forward_flag = false;
 
     dhmp_post_send(cwork->rdma_trans, &msg);
 

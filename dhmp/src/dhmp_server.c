@@ -48,7 +48,7 @@ static void *connection_routine(void *arg) {
     int retry_cnt = 0;
 
     server->replica_transports_table[target_id] =
-        dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), false, false);
+        dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), DHMP_TRANSPORT_TYPE_REPLICA_NORMAL);
     while (1) {
         INFO_LOG("trying to connect retry count :%d", retry_cnt);
         int retval = dhmp_transport_connect(server->replica_transports_table[target_id],
@@ -73,6 +73,7 @@ static void *connection_routine(void *arg) {
         }
     }
     DEBUG_LOG("connection_routine finished");
+    free(arg);
     return NULL;
 }
 
@@ -85,20 +86,21 @@ static void *connection_routine(void *arg) {
  */
 void dhmp_server_append_log(struct dhmp_msg *msg) {
     struct dhmp_msg *msg_copy;
+    // TODO when to free
     msg_copy = malloc(sizeof(struct dhmp_msg));
 
-    pthread_mutex_lock(&server->log_lock);
-    list_add_tail(&msg_copy->entry, &server->log);
-    pthread_mutex_unlock(&server->log_lock);
+    // pthread_mutex_lock(&server->log_lock);
+    // list_add_tail(&msg_copy->entry, &server->log);
+    // pthread_mutex_unlock(&server->log_lock);
 }
 /**
  * @brief leader used for directly forwarding some client's request, like dhmp_malloc() etc.
  * Blocking
  * @param msg forwarding msg pointer
  */
-void dhmp_leader_forward_msg(struct dhmp_msg *msg) {
+void dhmp_leader_forward_msg_broadcast(struct dhmp_msg *msg) {
     // TODO check if the server is leader.
-
+    // TODO when to free
     struct dhmp_msg *msg_copy;
     msg_copy = malloc(sizeof(struct dhmp_msg));
 
@@ -281,7 +283,8 @@ void dhmp_server_init(int id) {
     for (i = 0; i < DHMP_DRAM_HT_SIZE; i++)
         INIT_HLIST_HEAD(&server->dram_ht[i]);
 
-    server->listen_trans = dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), true, false);
+    server->listen_trans =
+        dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), DHMP_TRANSPORT_TYPE_CLIENT_LISTEN);
     if (!server->listen_trans) {
         ERROR_LOG("create rdma transport error.");
         exit(-1);
@@ -301,7 +304,8 @@ void dhmp_server_init(int id) {
     memset(server->replica_transports_table, 0, (DHMP_MAX_SERVER_GROUP_NUM - 1) * sizeof(struct dhmp_transport *));
 
     // passively listen from the higher # replica
-    server->replica_listen_transport = dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), true, false);
+    server->replica_listen_transport =
+        dhmp_transport_create(&server->ctx, dhmp_get_dev_from_server(), DHMP_TRANSPORT_TYPE_REPLICA_LISTEN);
     if (!server->replica_listen_transport) {
         ERROR_LOG("create replica_listen_transport error.");
         exit(-1);

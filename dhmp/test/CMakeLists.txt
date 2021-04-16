@@ -4,17 +4,19 @@
 set (CLIENT_SRCS client.c)
 set (SERVER_SRCS server.c)
 set (WATCHER_SRCS watcher.c)
-
+set (MY_CLIENT_SRC sample_client.c)
 #set (CMAKE_CXX_FLAGS "-Wall -lxml2 -lrdmacm -libverbs -lpthread -lnuma -lrt -lm")
 
 set (EXECUTABLE_OUTPUT_PATH ${DHMP_SOURCE_DIR}/bin)
-
+set (LINK_LIBS dhmp xml2 pthread rdmacm ibverbs numa rt m json-c)
 # 指定生成目标
 add_executable(client ${CLIENT_SRCS})
 add_executable(server ${SERVER_SRCS})
 add_executable(watcher ${WATCHER_SRCS})
+add_executable(myclient ${MY_CLIENT_SRC})
 find_package(LibXml2 REQUIRED)
 
+target_link_libraries(myclient ${LINK_LIBS})
 # 添加链接库
 target_link_libraries(client dhmp)
 target_link_libraries(client xml2)

@@ -11,13 +11,13 @@ int main(int argc, char *argv[]) {
 
     dhmp_client_init();
 
-    addr = dhmp_malloc(size);
+    // addr = dhmp_malloc(size);
 
-    dhmp_write(addr, str, size);
+    // dhmp_write(addr, str, size);
 
-    dhmp_read(addr, str, size);
+    // dhmp_read(addr, str, size);
 
-    dhmp_free(addr);
+    // dhmp_free(addr);
 
     dhmp_client_destroy();
 

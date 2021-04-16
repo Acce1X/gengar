@@ -162,7 +162,8 @@ void dhmp_watcher_init() {
     memset(watcher->connect_trans, 0, DHMP_MAX_SERVER_GROUP_NUM * sizeof(struct dhmp_transport *));
     for (i = 0; i < watcher->config.groups_cnt; i++) {
         INFO_LOG("create the [%d]-th normal transport.", i);
-        watcher->connect_trans[i] = dhmp_transport_create(&watcher->ctx, dhmp_get_dev_from_watcher(), false, false);
+        watcher->connect_trans[i] =
+            dhmp_transport_create(&watcher->ctx, dhmp_get_dev_from_watcher(), DHMP_TRANSPORT_TYPE_SERVER_NORMAL);
         if (!watcher->connect_trans[i]) {
             ERROR_LOG("create the [%d]-th transport error.", i);
             continue;
